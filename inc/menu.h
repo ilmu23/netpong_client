@@ -11,4 +11,40 @@
 
 #include "defs.h"
 
+typedef struct __menu_item	menu_item;
+typedef struct __menu		menu;
+
+typedef enum __menu_action {
+	PLAY,
+	LOGIN,
+	ENTER_MENU,
+	SELECT_OPTION,
+	EXIT
+}	menu_action;
+
+typedef void	(*opt_setter)(const uintptr_t);
+
+struct __menu_item {
+	struct {
+		menu_item	*up;
+		menu_item	*down;
+		menu_item	*left;
+		menu_item	*right;
+	}			neighbors;
+	struct {
+		opt_setter	set;
+		uintptr_t	val;
+	}			option;
+	const char	*title;
+	const menu	*next;
+	const menu	*prev;
+	menu_action	action;
+	u8			selected;
+};
+
+struct __menu {
+	menu_item	*root;
+	menu_item	*current;
+};
+
 u8	start_menu(void);

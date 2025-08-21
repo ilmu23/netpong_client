@@ -5,22 +5,12 @@
 // ██║        ██║███████╗██║     ╚██████╔╝   ██║   ╚██████╗██║  ██║██║  ██║██║  ██║
 // ╚═╝        ╚═╝╚══════╝╚═╝      ╚═════╝    ╚═╝    ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝
 //
-// <<game.h>>
+// <<display.h>>
 
 #pragma once
 
-#include "defs.h"
+#include "menu.h"
+#include "game.h"
 
-typedef struct {
-	f32	p1_pos;
-	f32	p2_pos;
-	struct {
-		f32	x;
-		f32	y;
-	}	ball;
-	u8	p1_score;
-	u8	p2_score;
-}	game;
-
-u8	setup_game_binds(void);
-u8	play(void);
+u8	display_menu(const menu *menu);
+u8	display_game(const game *game);

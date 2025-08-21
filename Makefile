@@ -30,6 +30,7 @@ SERVDIR	=	server
 UTILDIR	=	utils
 
 FILES	=	main.c \
+			display.c \
 			game.c \
 			menu.c
 
