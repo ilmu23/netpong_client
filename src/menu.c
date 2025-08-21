@@ -7,8 +7,10 @@
 //
 // <<menu.c>>
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <kbinput/kbinput.h>
 
@@ -102,9 +104,14 @@ u8	start_menu(void) {
 	while (rv) {
 		display_menu(menus.current);
 		event = kbinput_listen(menu_binds);
-		if (!event)
+		if (!event) {
+			if (errno == EINTR) {
+				errno = 0;
+				continue ;
+			}
 			rv = 0;
-		else if (event->fn == _quit)
+			break ;
+		} else if (event->fn == _quit)
 			break ;
 		if (!event->fn((kbinput_key *)event))
 			rv = 0;
@@ -204,7 +211,9 @@ static inline u8	_init(void) {
 	if (!_setup_menu_binds() || !setup_game_binds())
 		return 0;
 	setvbuf(stdout, NULL, _IOFBF, 4096);
-	return _setup_menus();
+	if (!_setup_menus())
+		return 0;
+	return init_display();
 }
 
 static inline u8	_cleanup(const u8 rv) {
@@ -252,6 +261,7 @@ static inline u8	_setup_menu_binds(void) {
 			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_ENTER, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _select));
 			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_BACKSPACE, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _back));
 			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_ESCAPE, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _quit));
+			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key('q', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _quit));
 	}
 	return rv;
 }
@@ -288,11 +298,31 @@ static inline u8	_setup_menus(void) {
 	menus.colors.selection.bg = malloc(sizeof(*menus.colors.selection.bg));
 	if (!menus.main || !menus.colors.fg || !menus.colors.selection.fg || !menus.colors.selection.bg)
 		return 0;
-	menus.main->root = _new_item("Start Game", NULL, NULL, PLAY, NULL, 0);
-	menus.colors.fg->root = _new_item(color_codes[0], menus.main, NULL, SELECT_OPTION, _set_fg_color, 0);
-	menus.colors.selection.fg->root = _new_item(color_codes[0], menus.main, NULL, SELECT_OPTION, _set_selection_fg_color, 0);
-	menus.colors.selection.bg->root = _new_item(color_codes[0], menus.main, NULL, SELECT_OPTION, _set_selection_bg_color, 0);
-	if (!menus.main->root || !menus.colors.fg->root)
+	*menus.main = (menu){
+		.root = _new_item("Start Game", NULL, NULL, PLAY, NULL, 0),
+		.width = 1,
+		.height = 1,
+		.longest_title = strlen("Start Game")
+	};
+	*menus.colors.fg = (menu){
+		.root = _new_item(color_codes[0], menus.main, NULL, SELECT_OPTION, _set_fg_color, 0),
+		.width = 8,
+		.height = 1,
+		.longest_title = 3
+	};
+	*menus.colors.selection.fg = (menu){
+		.root = _new_item(color_codes[0], menus.main, NULL, SELECT_OPTION, _set_selection_fg_color, 0),
+		.width = 8,
+		.height = 1,
+		.longest_title = 3
+	};
+	*menus.colors.selection.bg = (menu){
+		.root = _new_item(color_codes[0], menus.main, NULL, SELECT_OPTION, _set_selection_bg_color, 0),
+		.width = 8,
+		.height = 1,
+		.longest_title = 3
+	};
+	if (!menus.main->root || !menus.colors.fg->root || !menus.colors.selection.fg || !menus.colors.selection.bg)
 		return 0;
 	menus.main->current = menus.main->root;
 	menus.colors.fg->current = menus.colors.fg->root;
@@ -301,18 +331,34 @@ static inline u8	_setup_menus(void) {
 	tmp = menus.main->root;
 	if (!_add_below(tmp, _new_item("Login", NULL, __LOGIN_MENU__, LOGIN, NULL, 0)))
 		return 0;
+	menus.main->height++;
 	tmp = tmp->neighbors.down;
+	if (strlen(tmp->title) > menus.main->longest_title)
+		menus.main->longest_title = strlen(tmp->title);
 	if (!_add_below(tmp, _new_item("Set Foregroung Color", NULL, menus.colors.fg, ENTER_MENU, NULL, 0)))
 		return 0;
+	menus.main->height++;
 	tmp = tmp->neighbors.down;
+	if (strlen(tmp->title) > menus.main->longest_title)
+		menus.main->longest_title = strlen(tmp->title);
 	if (!_add_below(tmp, _new_item("Set Selection Foreground Color", NULL, menus.colors.selection.fg, ENTER_MENU, NULL, 0)))
 		return 0;
+	menus.main->height++;
 	tmp = tmp->neighbors.down;
+	if (strlen(tmp->title) > menus.main->longest_title)
+		menus.main->longest_title = strlen(tmp->title);
 	if (!_add_below(tmp, _new_item("Set Selection Background Color", NULL, menus.colors.selection.bg, ENTER_MENU, NULL, 0)))
 		return 0;
+	menus.main->height++;
 	tmp = tmp->neighbors.down;
+	if (strlen(tmp->title) > menus.main->longest_title)
+		menus.main->longest_title = strlen(tmp->title);
 	if (!_add_below(tmp, _new_item("Exit", NULL, NULL, EXIT, NULL, 0)))
 		return 0;
+	menus.main->height++;
+	tmp = tmp->neighbors.down;
+	if (strlen(tmp->title) > menus.main->longest_title)
+		menus.main->longest_title = strlen(tmp->title);
 	menus.colors.selection.bg->root->selected = 1;
 	menus.colors.selection.fg->root->selected = 1;
 	menus.colors.fg->root->selected = 1;
@@ -337,6 +383,7 @@ static inline u8	_setup_colormenu(menu *menu, opt_setter setter) {
 			if (!_add_below(down, _new_item(color_codes[i], menus.main, NULL, SELECT_OPTION, setter, i)))
 				return 0;
 			down = down->neighbors.down;
+			menu->height++;
 			tmp = down;
 		}
 	}

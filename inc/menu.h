@@ -45,6 +45,9 @@ struct __menu_item {
 struct __menu {
 	menu_item	*root;
 	menu_item	*current;
+	size_t		longest_title;
+	u8			height;
+	u8			width;
 };
 
 u8	start_menu(void);
