@@ -113,8 +113,11 @@ u8	start_menu(void) {
 			break ;
 		} else if (event->fn == _quit)
 			break ;
-		if (!event->fn((kbinput_key *)event))
+		if (!event->fn((kbinput_key *)event)) {
+			if (event->fn == _select)
+				break ;
 			rv = 0;
+		}
 	}
 	return _cleanup(rv);
 }
