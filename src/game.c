@@ -79,44 +79,54 @@ u8	play(void) {
 
 static inline const kbinput_key	*_p1_move_paddle(const kbinput_key *event) {
 	static direction	direction = STOP;
-	u8					rv;
 
 	switch (kb_protocol) {
 		case KB_INPUT_PROTOCOL_KITTY:
-			if (event->event_type == KB_EVENT_RELEASE)
-				rv = _move_paddle(sockets.p1, STOP);
-			else
-				rv = _move_paddle(sockets.p1, (event->code == 'w') ? UP : DOWN);
+			if (event->code == 'w') {
+				if (event->event_type == KB_EVENT_PRESS)
+					direction = (direction == STOP) ? UP : STOP;
+				else
+					direction = (direction == UP) ? STOP : DOWN;
+			} else {
+				if (event->event_type == KB_EVENT_PRESS)
+					direction = (direction == STOP) ? DOWN : STOP;
+				else
+					direction = (direction == DOWN) ? STOP : UP;
+			}
 			break ;
 		case KB_INPUT_PROTOCOL_LEGACY:
 			if (event->code == KB_KEY_UP)
 				direction = (direction != UP) ? UP : STOP;
 			else
 				direction = (direction != DOWN) ? DOWN : STOP;
-			rv = _move_paddle(sockets.p1, direction);
 	}
-	return (rv) ? event : NULL;
+	return (_move_paddle(sockets.p2, direction)) ? event : NULL;
 }
 
 static inline const kbinput_key	*_p2_move_paddle(const kbinput_key *event) {
 	static direction	direction = STOP;
-	u8					rv;
 
 	switch (kb_protocol) {
 		case KB_INPUT_PROTOCOL_KITTY:
-			if (((const kbinput_key *)event)->event_type == KB_EVENT_RELEASE)
-				rv = _move_paddle(sockets.p2, STOP);
-			else
-				rv = _move_paddle(sockets.p2, (event->code == 'w') ? UP : DOWN);
+			if (event->code == 'w') {
+				if (event->event_type == KB_EVENT_PRESS)
+					direction = (direction == STOP) ? UP : STOP;
+				else
+					direction = (direction == UP) ? STOP : DOWN;
+			} else {
+				if (event->event_type == KB_EVENT_PRESS)
+					direction = (direction == STOP) ? DOWN : STOP;
+				else
+					direction = (direction == DOWN) ? STOP : UP;
+			}
 			break ;
 		case KB_INPUT_PROTOCOL_LEGACY:
 			if (event->code == KB_KEY_UP)
 				direction = (direction != UP) ? UP : STOP;
 			else
 				direction = (direction != DOWN) ? DOWN : STOP;
-			rv = _move_paddle(sockets.p2, direction);
 	}
-	return (rv) ? event : NULL;
+	return (_move_paddle(sockets.p2, direction)) ? event : NULL;
 }
 
 static inline const kbinput_key	*_p1_pause(const kbinput_key *event) {
