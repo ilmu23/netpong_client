@@ -15,9 +15,9 @@
 typedef const kbinput_key	*(*game_fn)(const kbinput_key *);
 
 typedef enum __direction {
-	UP = 0,
-	DOWN = 1,
-	STOP = 2
+	UP = 0x1,
+	DOWN = 0x2,
+	STOP = 0x0
 }	direction;
 
 extern kbinput_listener_id	game_binds;
