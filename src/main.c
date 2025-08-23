@@ -8,7 +8,6 @@
 // <<main.c>>
 
 #include <signal.h>
-#include <string.h>
 #include <kbinput/kbinput.h>
 
 #include "menu.h"
@@ -34,7 +33,7 @@ int	main(void) {
 }
 
 static inline void	_fatal_sig(i32 sig) {
-	kbinput_cleanup();
+	cleanup();
 	action.sa_handler = SIG_DFL;
 	sigaction(sig, &action, NULL);
 	raise(sig);

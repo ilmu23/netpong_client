@@ -64,7 +64,6 @@ static inline void	_set_selection_fg_color(const uintptr_t val);
 static inline void	_set_selection_bg_color(const uintptr_t val);
 
 static inline u8	_init(void);
-static inline u8	_cleanup(const u8 rv);
 static inline u8	_setup_menu_binds(void);
 
 static inline void	_free_menu(menu *menu);
@@ -121,7 +120,17 @@ u8	start_menu(void) {
 			rv = 0;
 		}
 	}
-	return _cleanup(rv);
+	cleanup();
+	return rv;
+}
+
+void	cleanup(void) {
+	kbinput_cleanup();
+	write(1, _TERM_MAIN_SCREEN, sizeof(_TERM_MAIN_SCREEN));
+	_free_menu(menus.colors.selection.bg);
+	_free_menu(menus.colors.selection.fg);
+	_free_menu(menus.colors.fg);
+	_free_menu(menus.main);
 }
 
 static inline const kbinput_key	*_navigate(const kbinput_key *event) {
@@ -219,16 +228,6 @@ static inline u8	_init(void) {
 	if (!_setup_menus())
 		return 0;
 	return init_display();
-}
-
-static inline u8	_cleanup(const u8 rv) {
-	kbinput_cleanup();
-	write(1, _TERM_MAIN_SCREEN, sizeof(_TERM_MAIN_SCREEN));
-	_free_menu(menus.colors.selection.bg);
-	_free_menu(menus.colors.selection.fg);
-	_free_menu(menus.colors.fg);
-	_free_menu(menus.main);
-	return rv;
 }
 
 static inline u8	_setup_menu_binds(void) {

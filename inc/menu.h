@@ -51,3 +51,5 @@ struct __menu {
 };
 
 u8	start_menu(void);
+
+void	cleanup(void);
