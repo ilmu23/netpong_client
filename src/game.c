@@ -12,6 +12,8 @@
 
 #include "data.h"
 
+typedef const kbinput_key	*(*game_fn)(const kbinput_key *);
+
 typedef enum __direction {
 	UP = 0,
 	DOWN = 1,
@@ -30,12 +32,12 @@ struct {
 u8	srv_version;
 u8	running;
 
-static inline void	*_p1_move_paddle(void *event);
-static inline void	*_p2_move_paddle(void *event);
-static inline void	*_p1_pause(void *event);
-static inline void	*_p2_pause(void *event);
-static inline void	*_p1_quit(void *event);
-static inline void	*_p2_quit(void *event);
+static inline const kbinput_key	*_p1_move_paddle(const kbinput_key *event);
+static inline const kbinput_key	*_p2_move_paddle(const kbinput_key *event);
+static inline const kbinput_key	*_p1_pause(const kbinput_key *event);
+static inline const kbinput_key	*_p2_pause(const kbinput_key *event);
+static inline const kbinput_key	*_p1_quit(const kbinput_key *event);
+static inline const kbinput_key	*_p2_quit(const kbinput_key *event);
 
 static inline u8	_move_paddle(const i32 socket, const direction direction);
 static inline u8	_pause(const i32 socket);
@@ -75,19 +77,19 @@ u8	play(void) {
 	return 1;
 }
 
-static inline void	*_p1_move_paddle(void *event) {
+static inline const kbinput_key	*_p1_move_paddle(const kbinput_key *event) {
 	static direction	direction = STOP;
 	u8					rv;
 
 	switch (kb_protocol) {
 		case KB_INPUT_PROTOCOL_KITTY:
-			if (((kbinput_key *)event)->event_type == KB_EVENT_RELEASE)
+			if (event->event_type == KB_EVENT_RELEASE)
 				rv = _move_paddle(sockets.p1, STOP);
 			else
-				rv = _move_paddle(sockets.p1, (((kbinput_key *)event)->code == 'w') ? UP : DOWN);
+				rv = _move_paddle(sockets.p1, (event->code == 'w') ? UP : DOWN);
 			break ;
 		case KB_INPUT_PROTOCOL_LEGACY:
-			if (((kbinput_key *)event)->code == KB_KEY_UP)
+			if (event->code == KB_KEY_UP)
 				direction = (direction != UP) ? UP : STOP;
 			else
 				direction = (direction != DOWN) ? DOWN : STOP;
@@ -96,19 +98,19 @@ static inline void	*_p1_move_paddle(void *event) {
 	return (rv) ? event : NULL;
 }
 
-static inline void	*_p2_move_paddle(void *event) {
+static inline const kbinput_key	*_p2_move_paddle(const kbinput_key *event) {
 	static direction	direction = STOP;
 	u8					rv;
 
 	switch (kb_protocol) {
 		case KB_INPUT_PROTOCOL_KITTY:
-			if (((kbinput_key *)event)->event_type == KB_EVENT_RELEASE)
+			if (((const kbinput_key *)event)->event_type == KB_EVENT_RELEASE)
 				rv = _move_paddle(sockets.p2, STOP);
 			else
-				rv = _move_paddle(sockets.p2, (((kbinput_key *)event)->code == 'w') ? UP : DOWN);
+				rv = _move_paddle(sockets.p2, (event->code == 'w') ? UP : DOWN);
 			break ;
 		case KB_INPUT_PROTOCOL_LEGACY:
-			if (((kbinput_key *)event)->code == KB_KEY_UP)
+			if (event->code == KB_KEY_UP)
 				direction = (direction != UP) ? UP : STOP;
 			else
 				direction = (direction != DOWN) ? DOWN : STOP;
@@ -117,19 +119,19 @@ static inline void	*_p2_move_paddle(void *event) {
 	return (rv) ? event : NULL;
 }
 
-static inline void	*_p1_pause(void *event) {
+static inline const kbinput_key	*_p1_pause(const kbinput_key *event) {
 	return (_pause(sockets.p1)) ? event : NULL;
 }
 
-static inline void	*_p2_pause(void *event) {
+static inline const kbinput_key	*_p2_pause(const kbinput_key *event) {
 	return (_pause(sockets.p2)) ? event : NULL;
 }
 
-static inline void	*_p1_quit(void *event) {
+static inline const kbinput_key	*_p1_quit(const kbinput_key *event) {
 	return (_quit(sockets.p1)) ? event : NULL;
 }
 
-static inline void	*_p2_quit(void *event) {
+static inline const kbinput_key	*_p2_quit(const kbinput_key *event) {
 	return (_quit(sockets.p2)) ? event : NULL;
 }
 

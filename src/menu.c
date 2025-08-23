@@ -28,6 +28,8 @@
 #define _TERM_ALT_SCREEN	_SMCUP
 #define _TERM_MAIN_SCREEN	_RMCUP
 
+typedef const kbinput_key	*(*menu_fn)(const kbinput_key *);
+
 extern struct {
 	u8	fg;
 	struct selection {
@@ -52,10 +54,10 @@ struct {
 	menu	*current;
 }	menus;
 
-static inline void	*_navigate(void *event);
-static inline void	*_select(void *event);
-static inline void	*_back(void *event);
-static inline void	*_quit(void *event);
+static inline const kbinput_key	*_navigate(const kbinput_key *event);
+static inline const kbinput_key	*_select(const kbinput_key *event);
+static inline const kbinput_key	*_back(const kbinput_key *event);
+static inline const kbinput_key	*_quit(const kbinput_key *event);
 
 static inline void	_set_fg_color(const uintptr_t val);
 static inline void	_set_selection_fg_color(const uintptr_t val);
@@ -111,10 +113,10 @@ u8	start_menu(void) {
 			}
 			rv = 0;
 			break ;
-		} else if (event->fn == _quit)
+		} else if ((menu_fn)event->fn == _quit)
 			break ;
-		if (!event->fn((kbinput_key *)event)) {
-			if (event->fn == _select)
+		if (!((menu_fn)event->fn)(event)) {
+			if ((menu_fn)event->fn == _select)
 				break ;
 			rv = 0;
 		}
@@ -122,10 +124,10 @@ u8	start_menu(void) {
 	return _cleanup(rv);
 }
 
-static inline void	*_navigate(void *event) {
+static inline const kbinput_key	*_navigate(const kbinput_key *event) {
 	menu_item	*next;
 
-	switch (((kbinput_key *)event)->code) {
+	switch (event->code) {
 		case 'h':
 		case 'a':
 		case KB_KEY_LEFT:
@@ -154,7 +156,7 @@ static inline void	*_navigate(void *event) {
 	return event;
 }
 
-static inline void	*_select(void *event) {
+static inline const kbinput_key	*_select(const kbinput_key *event) {
 	switch (menus.current->current->action) {
 		case PLAY:
 			return (play()) ? event : NULL;
@@ -178,13 +180,13 @@ static inline void	*_select(void *event) {
 	return event;
 }
 
-static inline void	*_back(void *event) {
+static inline const kbinput_key	*_back(const kbinput_key *event) {
 	if (menus.current->current->prev)
 		menus.current = (menu *)menus.current->current->prev;
 	return event;
 }
 
-static inline void	*_quit([[gnu::unused]] void *event) {
+static inline const kbinput_key	*_quit([[gnu::unused]] const kbinput_key *event) {
 	return NULL;
 }
 
