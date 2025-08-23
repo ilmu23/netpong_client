@@ -20,7 +20,7 @@
 
 #define CSI	"\x1b["
 
-#define _OOLOR_CODE_COUNT	256
+#define _COLOR_CODE_COUNT	256
 
 #define _SMCUP	CSI "?1049h"
 #define _RMCUP	CSI "?1049l"
@@ -29,6 +29,19 @@
 #define _TERM_MAIN_SCREEN	_RMCUP
 
 typedef const kbinput_key	*(*menu_fn)(const kbinput_key *);
+
+extern struct {
+	const char	*addr;
+	const char	*port;
+	struct {
+		i32	state;
+		i32	p1;
+		i32	p2;
+	}	sockets;
+	u8	srv_version;
+	u8	running;
+	u8	direct;
+}	server_info;
 
 extern struct {
 	u8	fg;
@@ -63,7 +76,7 @@ static inline void	_set_fg_color(const uintptr_t val);
 static inline void	_set_selection_fg_color(const uintptr_t val);
 static inline void	_set_selection_bg_color(const uintptr_t val);
 
-static inline u8	_init(void);
+static inline u8	_init(const char *server_addr, const char *server_port, const u8 direct);
 static inline u8	_setup_menu_binds(void);
 
 static inline void	_free_menu(menu *menu);
@@ -74,7 +87,7 @@ static inline menu_item	*_new_item(const char *title, const menu *prev, const me
 static inline u8		_add_right(menu_item *ref, menu_item *new);
 static inline u8		_add_below(menu_item *ref, menu_item *new);
 
-static const char	*color_codes[_OOLOR_CODE_COUNT] = {
+static const char	*color_codes[_COLOR_CODE_COUNT] = {
 	"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15",
 	"16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30",
 	"31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45",
@@ -92,13 +105,14 @@ static const char	*color_codes[_OOLOR_CODE_COUNT] = {
 	"204", "205", "206", "207", "208", "209", "210", "211", "212", "213", "214", "215", "216", "217",
 	"218", "219", "220", "221", "222", "223", "224", "225", "226", "227", "228", "229", "230", "231",
 	"232", "233", "234", "235", "236", "237", "238", "239", "240", "241", "242", "243", "244", "245",
-	"246", "247", "248", "249", "250", "251", "252", "253", "254", "255" };
+	"246", "247", "248", "249", "250", "251", "252", "253", "254", "255"
+};
 
 u8	main_menu(const char *server_addr, const char *server_port, const u8 direction) {
 	const kbinput_key	*event;
 	u8					rv;
 
-	if (!_init())
+	if (!_init(server_addr, server_port, direction))
 		return 0;
 	rv = 1;
 	kbinput_set_cursor_mode(OFF);
@@ -211,7 +225,7 @@ static inline void	_set_selection_bg_color(const uintptr_t val) {
 	colors.selection.bg = val;
 }
 
-static inline u8	_init(void) {
+static inline u8	_init(const char *server_addr, const char *server_port, const u8 direct) {
 	if (write(1, _TERM_ALT_SCREEN, sizeof(_TERM_ALT_SCREEN)) != sizeof(_TERM_ALT_SCREEN))
 		return 0;
 	kbinput_init();
@@ -227,6 +241,9 @@ static inline u8	_init(void) {
 	setvbuf(stdout, NULL, _IOFBF, 4096);
 	if (!_setup_menus())
 		return 0;
+	server_info.addr = server_addr;
+	server_info.port = server_port;
+	server_info.direct = direct;
 	return init_display();
 }
 
@@ -378,7 +395,7 @@ static inline u8	_setup_colormenu(menu *menu, opt_setter setter) {
 	menu_item	*tmp;
 	size_t		i;
 
-	for (i = 1, tmp = down = menu->root; i < _OOLOR_CODE_COUNT; i++) {
+	for (i = 1, tmp = down = menu->root; i < _COLOR_CODE_COUNT; i++) {
 		if (i && i % 8) {
 			if (!_add_right(tmp, _new_item(color_codes[i], menus.main, NULL, SELECT_OPTION, setter, i)))
 				return 0;

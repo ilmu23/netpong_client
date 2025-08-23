@@ -19,7 +19,7 @@ cflags.normal	=	-s -O1
 cflags.extra	=	
 CFLAGS			=	$(cflags.common) $(cflags.$(BUILD)) $(cflags.extra)
 
-LDFLAGS	=	-L/home/ilmu/.local/lib -lkbinput
+LDFLAGS	=	-L/home/ilmu/.local/lib -lkbinput -lpthread -lm
 
 SRCDIR	=	src
 OBJDIR	=	obj
@@ -32,7 +32,8 @@ UTILDIR	=	utils
 FILES	=	main.c \
 			display.c \
 			game.c \
-			menu.c
+			menu.c \
+			utils.c
 
 SRCS	=	$(addprefix $(SRCDIR)/, $(FILES))
 OBJS	=	$(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(SRCS))

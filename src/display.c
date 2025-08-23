@@ -7,15 +7,30 @@
 //
 // <<display.c>>
 
+#include <math.h>
 #include <stdio.h>
 #include <signal.h>
 #include <string.h>
 #include <sys/ioctl.h>
 
+#include "utils.h"
 #include "display.h"
 
 #define set_color_fg(x)	(fprintf(stdout, "\x1b[38;5;%hhum", x))
 #define set_color_bg(x)	(fprintf(stdout, "\x1b[48;5;%hhum", x))
+
+#define _PADDLE_1Q_UP	0x28C0U
+#define _PADDLE_H_UP	0x28E4U
+#define _PADDLE_3Q_UP	0x28F6U
+#define _PADDLE_FULL	0x28FFU
+#define _PADDLE_3Q_DOWN	0x283FU
+#define _PADDLE_H_DOWN	0x281BU
+#define _PADDLE_1Q_DOWN	0x2809U
+
+#define _BALL_TL_FULL	0x28E0U
+#define _BALL_TR_FULL	0x28C4U
+#define _BALL_BL_FULL	0x2819U
+#define _BALL_BR_FULL	0x280BU
 
 struct {
 	u8	fg;
@@ -40,6 +55,11 @@ struct {
 	}	height;
 }	window_size;
 
+static inline u8	_putc_at(const u32 x, const u32 y, const i32 cp);
+
+static inline u8	_draw_paddle(const f32 paddle_pos, const u32 root_x, const u32 root_y, const u32 offset);
+static inline u8	_draw_ball(const f32 ball_pos[2], const u32 root_x, const u32 root_y);
+
 static inline u8	_scroll_menu(const menu *menu, const u16 max_visibe_x, const u16 max_visible_y);
 static inline u8	_pad(size_t n);
 
@@ -47,6 +67,23 @@ static inline void	_calculate_padding(size_t *left, size_t *right, const size_t 
 static inline void	_calculate_top_left_xy(u32 *pos[2], const u16 block_width, const u16 block_height);
 
 static inline void	_update_window_size([[gnu::unused]] i32 sig);
+
+u8	display_game(const game *game) {
+	static const u16	width = 42;
+	static const u16	height = 20;
+	u32					root_x;
+	u32					root_y;
+
+	if (window_size.width.cells < width || window_size.height.cells < height) {
+		// PAUSE GAME
+		return 0;
+	}
+	_calculate_top_left_xy((u32*[2]){&root_x, &root_y}, width, height);
+	_draw_paddle(height - game->p1_pos, root_x, root_y, 0);
+	_draw_paddle(height - game->p2_pos, root_x, root_y, width - 1);
+	_draw_ball((f32[2]){game->ball.x, height - game->ball.y}, root_x, root_y);
+	return fflush(stdout) != EOF;
+}
 
 u8	display_menu(const menu *menu) {
 	const menu_item	*current;
@@ -116,6 +153,106 @@ u8	init_display(void) {
 	if (sigaction(SIGWINCH, &action, NULL) == -1)
 		return 0;
 	_update_window_size(0);
+	return 1;
+}
+
+static inline u8	_putc_at(const u32 x, const u32 y, const i32 cp) {
+	if (fprintf(stdout, "\x1b[%u;%uH", y, x) == -1)
+		return 0;
+	if (set_color_fg(colors.selection.bg) == -1)
+		return 0;
+	if (fputc_utf8(cp, stdout) == EOF)
+		return 0;
+	return fputs("\x1b[m", stdout) != EOF;
+}
+
+static inline u8	_draw_paddle(const f32 paddle_pos, const u32 root_x, const u32 root_y, const u32 offset) {
+	static const f32	paddle_height = 1.5f;
+	size_t				dots;
+	size_t				i;
+	struct {
+		f32	top_y;
+		u32	top_char;
+		u32	bot_char;
+	}					paddle;
+	f32					remainder;
+	f32					y;
+
+	if (!offset && fputs("\x1b[2J", stdout) == EOF)
+		return 0;
+	paddle.top_y = paddle_pos - paddle_height;
+	remainder = fmodf(paddle.top_y, 0.25);
+	if (remainder >= 0.25 / 2)
+		paddle.top_y = paddle.top_y - remainder + 0.25;
+	else
+		paddle.top_y = paddle.top_y - remainder;
+	y = paddle.top_y - floorf(paddle.top_y);
+	if (y < 0.25f)
+		paddle.top_char = _PADDLE_FULL;
+	else if (y < 0.5f)
+		paddle.top_char = _PADDLE_3Q_UP;
+	else if (y < 0.75f)
+		paddle.top_char = _PADDLE_H_UP;
+	else
+		paddle.top_char = _PADDLE_1Q_UP;
+	switch (paddle.top_char) {
+		case _PADDLE_FULL:
+			paddle.bot_char = _PADDLE_FULL;
+			break ;
+		case _PADDLE_3Q_UP:
+			paddle.bot_char = _PADDLE_1Q_DOWN;
+			break ;
+		case _PADDLE_H_UP:
+			paddle.bot_char = _PADDLE_H_DOWN;
+			break ;
+		case _PADDLE_1Q_UP:
+			paddle.bot_char = _PADDLE_3Q_DOWN;
+	}
+	paddle.top_y = floorf(paddle.top_y);
+	for (i = dots = 0; dots < 12; i++) {
+		if (i == 0) {
+			if (!_putc_at(root_x + offset, root_y + (u32)paddle.top_y, paddle.top_char))
+				return 0;
+			switch (paddle.top_char) {
+				case _PADDLE_FULL:
+					dots++;
+					[[fallthrough]];
+				case _PADDLE_3Q_UP:
+					dots++;
+					[[fallthrough]];
+				case _PADDLE_H_UP:
+					dots++;
+					[[fallthrough]];
+				case _PADDLE_1Q_UP:
+					dots++;
+			}
+		} else {
+			if (dots > 8) switch (dots) {
+				case 9:
+					return _putc_at(root_x + offset, root_y + (i32)paddle.top_y + i, _PADDLE_3Q_DOWN);
+				case 10:
+					return _putc_at(root_x + offset, root_y + (i32)paddle.top_y + i, _PADDLE_H_DOWN);
+				case 11:
+					return _putc_at(root_x + offset, root_y + (i32)paddle.top_y + i, _PADDLE_1Q_DOWN);
+			} else if (!_putc_at(root_x + offset, root_y + (i32)paddle.top_y + i, _PADDLE_FULL))
+				return 0;
+			dots += 4;
+		}
+	}
+	return 1;
+}
+
+static inline u8	_draw_ball(const f32 ball_pos[2], const u32 root_x, const u32 root_y) {
+	static const f32	ball_radius = 0.5f;
+	u32					ball_root_x;
+	u32					ball_root_y;
+
+	ball_root_x = (u32)floorf(ball_pos[0] - ball_radius);
+	ball_root_y = (u32)floorf(ball_pos[1] - ball_radius);
+	_putc_at(root_x + ball_root_x + 1, root_y + ball_root_y, _BALL_TL_FULL);
+	_putc_at(root_x + ball_root_x + 2, root_y + ball_root_y, _BALL_TR_FULL);
+	_putc_at(root_x + ball_root_x + 1, root_y + ball_root_y + 1, _BALL_BL_FULL);
+	_putc_at(root_x + ball_root_x + 2, root_y + ball_root_y + 1, _BALL_BR_FULL);
 	return 1;
 }
 

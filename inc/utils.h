@@ -5,27 +5,14 @@
 // ██║        ██║███████╗██║     ╚██████╔╝   ██║   ╚██████╗██║  ██║██║  ██║██║  ██║
 // ╚═╝        ╚═╝╚══════╝╚═╝      ╚═════╝    ╚═╝    ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝
 //
-// <<game.h>>
+// <<utils.h>>
 
 #pragma once
 
+#include <stdio.h>
+
 #include "defs.h"
 
-typedef struct {
-	f32	p1_pos;
-	f32	p2_pos;
-	struct {
-		f32	x;
-		f32	y;
-	}	ball;
-	u8	p1_score;
-	u8	p2_score;
-	u8	started;
-	u8	paused;
-	u8	status;
-	u8	actor;
-	u8	over;
-}	game;
+char	*utoa16(u16 n, char *buf);
 
-u8	setup_game_binds(void);
-u8	play(void);
+i32	fputc_utf8(const u32 cp, FILE *stream);

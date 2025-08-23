@@ -23,12 +23,9 @@
 #define MESSAGE_SERVER_GAME_OVER	2
 #define MESSAGE_SERVER_STATE_UPDATE	3
 
-typedef struct [[gnu::packed]] {
-	u8	version;
-	u8	type;
-	u16	length;
-	u8	body[18];
-}	message;
+#define GAME_OVER_ACT_WON		0x1U
+#define GAME_OVER_ACT_QUIT		0x2U
+#define GAME_OVER_SERVER_CLOSED	0x3U
 
 typedef struct [[gnu::packed]] {
 	u16	p1_port;
@@ -63,3 +60,15 @@ typedef struct [[gnu::packed]] __msg_srv_state {
 typedef struct [[gnu::packed]] __msg_clt_move_paddle {
 	u8	direction;
 }	msg_clt_move_paddle;
+
+typedef struct [[gnu::packed]] {
+	u8	version;
+	u8	type;
+	u16	length;
+	union [[gnu::packed]] {
+		msg_srv_init		init;
+		msg_srv_game_over	game_over;
+		msg_srv_state		state;
+		msg_clt_move_paddle	move_paddle;
+	}	body;
+}	message;
