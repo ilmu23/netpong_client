@@ -94,7 +94,7 @@ static const char	*color_codes[_OOLOR_CODE_COUNT] = {
 	"232", "233", "234", "235", "236", "237", "238", "239", "240", "241", "242", "243", "244", "245",
 	"246", "247", "248", "249", "250", "251", "252", "253", "254", "255" };
 
-u8	start_menu(void) {
+u8	main_menu(const char *server_addr, const char *server_port, const u8 direction) {
 	const kbinput_key	*event;
 	u8					rv;
 

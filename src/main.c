@@ -7,18 +7,32 @@
 //
 // <<main.c>>
 
+#include <stdio.h>
 #include <signal.h>
+#include <stdlib.h>
+#include <string.h>
 #include <kbinput/kbinput.h>
 
 #include "menu.h"
 
-static inline void	_fatal_sig(i32 sig);
-
 #define handle_sig(sig)	((sigaction(sig, &action, NULL) != -1) ? 1 : 0)
+
+static inline u8	_check_args(const i32 ac, const char **av, u8 *direct);
+
+static inline void	_fatal_sig(i32 sig);
 
 static struct sigaction	action;
 
-int	main(void) {
+int	main(i32 ac, char **av) {
+	u8	direct;
+
+	if (ac < 3) {
+		fprintf(stdout, "Usage: %s [-d | --direct] address port\n", PROG_NAME);
+		return 1;
+	}
+	direct = 0;
+	if (!_check_args(ac - 1, (const char **)&av[1], &direct))
+		return 1;
 	action.sa_handler = _fatal_sig;
 	if (!handle_sig(SIGABRT) || !handle_sig(SIGALRM) || !handle_sig(SIGBUS) ||
 		!handle_sig(SIGFPE) || !handle_sig(SIGHUP) || !handle_sig(SIGILL) ||
@@ -29,7 +43,36 @@ int	main(void) {
 		!handle_sig(SIGUSR2) || !handle_sig(SIGVTALRM) ||
 		!handle_sig(SIGXCPU) || !handle_sig(SIGXFSZ))
 		return 1;
-	return start_menu() ? 0 : 1;
+	return main_menu(av[ac - 2], av[ac - 1], direct) ? 0 : 1;
+}
+
+static inline u8	_check_args(const i32 ac, const char **av, u8 *direct) {
+	const char	*end;
+	const char	*cur;
+	size_t		i;
+	i64			n;
+
+	if (ac > 2) {
+		if (strcmp(av[0], "-d") != 0 && strcmp(av[0], "--direct") != 0) {
+			fprintf(stderr, "Unrecognized option: %s\n", av[0]);
+			return 0;
+		}
+		*direct = 1;
+	}
+	cur = av[0 + *direct];
+	for (i = 0, cur = av[1]; i < 4; i++, cur = (const char *)(uintptr_t)end + 1) {
+		n = strtol(cur, (char **)&end, 10);
+		if (n > UINT8_MAX || cur == end || *end != ((i < 3) ? '.' : '\0')) {
+			fprintf(stderr, "Invalid address: %s\n", av[0 + *direct]);
+			return 0;
+		}
+	}
+	n = strtol(av[1 + *direct], (char **)&end, 10);
+	if (n > UINT16_MAX || av[1 + *direct] == end || *end != '\0') {
+		fprintf(stderr, "Invalid port: %s\n", av[1 + *direct]);
+		return 0;
+	}
+	return 1;
 }
 
 static inline void	_fatal_sig(i32 sig) {

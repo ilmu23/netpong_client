@@ -12,6 +12,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifndef PROG_NAME
+# define PROG_NAME	"netpong"
+#endif
+
 typedef	int8_t		i8;
 typedef	int16_t		i16;
 typedef	int32_t		i32;

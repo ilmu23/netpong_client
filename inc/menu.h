@@ -50,6 +50,6 @@ struct __menu {
 	u8			width;
 };
 
-u8	start_menu(void);
+u8	main_menu(const char *server_addr, const char *server_port, const u8 direct);
 
 void	cleanup(void);
