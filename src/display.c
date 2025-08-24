@@ -10,14 +10,15 @@
 #include <math.h>
 #include <stdio.h>
 #include <signal.h>
+#include <stdarg.h>
 #include <string.h>
 #include <sys/ioctl.h>
 
 #include "utils.h"
 #include "display.h"
 
-#define set_color_fg(x)	(fprintf(stdout, "\x1b[38;5;%hhum", x))
-#define set_color_bg(x)	(fprintf(stdout, "\x1b[48;5;%hhum", x))
+#define set_color_fg(x)	(fprintf(stdout, "\x1b[38;5;%hhum", (u8)x))
+#define set_color_bg(x)	(fprintf(stdout, "\x1b[48;5;%hhum", (u8)x))
 
 #define _PADDLE_1Q_UP	0x28C0U
 #define _PADDLE_H_UP	0x28E4U
@@ -32,7 +33,7 @@
 #define _BALL_BL_FULL	0x2819U
 #define _BALL_BR_FULL	0x280BU
 
-#define _WIN_TOO_SMALL	"\x1b[H\x1b[J\x1b[1;38;5;196m[WINDOW TOO SMALL]\x1b[m"
+#define _WIN_TOO_SMALL	"\x1b[2J[WINDOW TOO SMALL]"
 
 struct {
 	u8	fg;
@@ -57,7 +58,9 @@ struct {
 	}	height;
 }	window_size;
 
-static inline u8	_putc_at(const u32 x, const u32 y, const i32 cp);
+static inline u8	_putc_at(const u32 x, const u32 y, const i16 hl[2], const i32 cp);
+static inline u8	_puts_at(const u32 x, const u32 y, const i16 hl[2], const char *s);
+static inline u8	_printf_at(const u32 x, const u32 y, const i16 hl[2], const char *fmt, ...);
 
 static inline u8	_draw_paddle(const f32 paddle_pos, const u32 root_x, const u32 root_y, const u32 offset);
 static inline u8	_draw_ball(const f32 ball_pos[2], const u32 root_x, const u32 root_y);
@@ -72,14 +75,16 @@ static inline void	_update_window_size([[gnu::unused]] i32 sig);
 
 u8	display_game(const game *game) {
 	static const u16	width = 40 + 2;
-	static const u16	height = 20;
+	static const u16	height = 20 + 2;
 	static u8			too_small_printed = 0;
 	u32					root_x;
 	u32					root_y;
+	u32					score_x;
+	u32					score_y;
 
 	if (window_size.width.cells < width || window_size.height.cells < height) {
 		if (!too_small_printed)
-			too_small_printed = (fputs(_WIN_TOO_SMALL, stdout) != EOF && fflush(stdout) != EOF) ? DISPLAY_GAME_WIN_TOO_SMALL : 0;
+			too_small_printed = (_puts_at(1, 1, (i16[2]){196, -1}, _WIN_TOO_SMALL) && fflush(stdout) != EOF) ? DISPLAY_GAME_WIN_TOO_SMALL : 0;
 		return too_small_printed;
 	}
 	too_small_printed = 0;
@@ -87,6 +92,9 @@ u8	display_game(const game *game) {
 	_draw_paddle(height - game->p1_pos, root_x, root_y, 0);
 	_draw_paddle(height - game->p2_pos, root_x, root_y, width - 1);
 	_draw_ball((f32[2]){game->ball.x, height - game->ball.y}, root_x, root_y);
+	score_y = height - 1;
+	score_x = (width - 8) / 2;
+	_printf_at(root_x + score_x, root_y + score_y, (i16[2]){-1, -1}, "%-3hhu--%3hhu", game->p1_score, game->p2_score);
 	return (fflush(stdout) != EOF) ? 1 : 0;
 }
 
@@ -120,7 +128,7 @@ u8	display_menu(const menu *menu) {
 	} else
 		max_visible_y = menu->height;
 	if (!max_visible_x || !max_visible_y) {
-		if (fputs(_WIN_TOO_SMALL, stdout) == EOF)
+		if (!_puts_at(1, 1, (i16[2]){196, -1}, _WIN_TOO_SMALL))
 			return 0;
 	} else if (max_visible_x != menu->width || max_visible_y != menu->height)
 		return _scroll_menu(menu, max_visible_x, max_visible_y);
@@ -161,12 +169,44 @@ u8	init_display(void) {
 	return 1;
 }
 
-static inline u8	_putc_at(const u32 x, const u32 y, const i32 cp) {
+static inline u8	_putc_at(const u32 x, const u32 y, const i16 hl[2], const i32 cp) {
 	if (fprintf(stdout, "\x1b[%u;%uH", y, x) == -1)
 		return 0;
-	if (set_color_fg(colors.selection.bg) == -1)
+	if (hl[0] != -1 && set_color_fg(hl[0]) == -1)
+		return 0;
+	if (hl[1] != -1 && set_color_bg(hl[1]) == -1)
 		return 0;
 	if (fputc_utf8(cp, stdout) == EOF)
+		return 0;
+	return fputs("\x1b[m", stdout) != EOF;
+}
+
+static inline u8	_puts_at(const u32 x, const u32 y, const i16 hl[2], const char *s) {
+	if (fprintf(stdout, "\x1b[%u;%uH", y, x) == -1)
+		return 0;
+	if (hl[0] != -1 && set_color_fg(hl[0]) == -1)
+		return 0;
+	if (hl[1] != -1 && set_color_bg(hl[1]) == -1)
+		return 0;
+	if (fputs(s, stdout) == EOF)
+		return 0;
+	return fputs("\x1b[m", stdout) != EOF;
+}
+
+static inline u8	_printf_at(const u32 x, const u32 y, const i16 hl[2], const char *fmt, ...) {
+	va_list	args;
+	ssize_t	rv;
+
+	if (fprintf(stdout, "\x1b[%u;%uH", y, x) == -1)
+		return 0;
+	if (hl[0] != -1 && set_color_fg(hl[0]) == -1)
+		return 0;
+	if (hl[1] != -1 && set_color_bg(hl[1]) == -1)
+		return 0;
+	va_start(args);
+	rv = vfprintf(stdout, fmt, args);
+	va_end(args);
+	if (rv == -1)
 		return 0;
 	return fputs("\x1b[m", stdout) != EOF;
 }
@@ -216,7 +256,7 @@ static inline u8	_draw_paddle(const f32 paddle_pos, const u32 root_x, const u32 
 	paddle.top_y = floorf(paddle.top_y);
 	for (i = dots = 0; dots < 12; i++) {
 		if (i == 0) {
-			if (!_putc_at(root_x + offset, root_y + (u32)paddle.top_y, paddle.top_char))
+			if (!_putc_at(root_x + offset, root_y + (u32)paddle.top_y, (i16[2]){colors.selection.bg, -1}, paddle.top_char))
 				return 0;
 			switch (paddle.top_char) {
 				case _PADDLE_FULL:
@@ -234,12 +274,12 @@ static inline u8	_draw_paddle(const f32 paddle_pos, const u32 root_x, const u32 
 		} else {
 			if (dots > 8) switch (dots) {
 				case 9:
-					return _putc_at(root_x + offset, root_y + (i32)paddle.top_y + i, _PADDLE_3Q_DOWN);
+					return _putc_at(root_x + offset, root_y + (i32)paddle.top_y + i, (i16[2]){colors.selection.bg, -1}, _PADDLE_3Q_DOWN);
 				case 10:
-					return _putc_at(root_x + offset, root_y + (i32)paddle.top_y + i, _PADDLE_H_DOWN);
+					return _putc_at(root_x + offset, root_y + (i32)paddle.top_y + i, (i16[2]){colors.selection.bg, -1}, _PADDLE_H_DOWN);
 				case 11:
-					return _putc_at(root_x + offset, root_y + (i32)paddle.top_y + i, _PADDLE_1Q_DOWN);
-			} else if (!_putc_at(root_x + offset, root_y + (i32)paddle.top_y + i, _PADDLE_FULL))
+					return _putc_at(root_x + offset, root_y + (i32)paddle.top_y + i, (i16[2]){colors.selection.bg, -1}, _PADDLE_1Q_DOWN);
+			} else if (!_putc_at(root_x + offset, root_y + (i32)paddle.top_y + i, (i16[2]){colors.selection.bg, -1}, _PADDLE_FULL))
 				return 0;
 			dots += 4;
 		}
@@ -254,10 +294,10 @@ static inline u8	_draw_ball(const f32 ball_pos[2], const u32 root_x, const u32 r
 
 	ball_root_x = (u32)floorf(ball_pos[0] - ball_radius);
 	ball_root_y = (u32)floorf(ball_pos[1] - ball_radius);
-	_putc_at(root_x + ball_root_x + 1, root_y + ball_root_y, _BALL_TL_FULL);
-	_putc_at(root_x + ball_root_x + 2, root_y + ball_root_y, _BALL_TR_FULL);
-	_putc_at(root_x + ball_root_x + 1, root_y + ball_root_y + 1, _BALL_BL_FULL);
-	_putc_at(root_x + ball_root_x + 2, root_y + ball_root_y + 1, _BALL_BR_FULL);
+	_putc_at(root_x + ball_root_x + 1, root_y + ball_root_y, (i16[2]){colors.selection.bg, -1}, _BALL_TL_FULL);
+	_putc_at(root_x + ball_root_x + 2, root_y + ball_root_y, (i16[2]){colors.selection.bg, -1}, _BALL_TR_FULL);
+	_putc_at(root_x + ball_root_x + 1, root_y + ball_root_y + 1, (i16[2]){colors.selection.bg, -1}, _BALL_BL_FULL);
+	_putc_at(root_x + ball_root_x + 2, root_y + ball_root_y + 1, (i16[2]){colors.selection.bg, -1}, _BALL_BR_FULL);
 	return 1;
 }
 
