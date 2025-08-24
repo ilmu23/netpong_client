@@ -28,6 +28,13 @@
 #define _GAME_FIELD_X	40.0f
 #define _GAME_FIELD_Y	20.0f
 
+#define _MSG_GAME_OVER			"Game over"
+#define _MSG_GAME_OVER_P1_WON	"Player 1 wins"
+#define _MSG_GAME_OVER_P2_WON	"Player 2 wins"
+#define _MSG_SERVER_CLOSED		"Server closed"
+#define _MSG_P1_QUIT			"Player 1 quit"
+#define _MSG_P2_QUIT			"Player 2 quit"
+
 #define add_sig(set, sig)	((sigaddset(&set, sig) != -1) ? 1 : 0)
 
 typedef const kbinput_key	*(*game_fn)(const kbinput_key *);
@@ -37,6 +44,14 @@ typedef enum __direction {
 	DOWN = 0x2,
 	STOP = 0x0
 }	direction;
+
+typedef enum {
+	PLAYER1_WON,
+	PLAYER2_WON,
+	PLAYER1_QUIT,
+	PLAYER2_QUIT,
+	SERVER_CLOSED
+}	message_type;
 
 extern kbinput_listener_id	game_binds;
 extern u8					kb_protocol;
@@ -98,6 +113,8 @@ static inline u8	_move_paddle(const i32 socket, const direction direction);
 static inline u8	_toggle_pause(const i32 socket);
 static inline u8	_start(const i32 socket);
 static inline u8	_quit(const i32 socket);
+
+static inline u8	_print_msg(const message_type msg, const u32 wait);
 
 static inline void	_close(i32 fd);
 static inline u8	_init_connection(void);
@@ -240,6 +257,17 @@ u8	play(void) {
 	server_info.running = 0;
 	pthread_cancel(kb_io_listener.tid);
 	pthread_join(kb_io_listener.tid, NULL);
+	write(1, "\x1b[=0u", 5);
+	switch (_game.state.status) {
+		case GAME_OVER_ACT_WON:
+			_print_msg((_game.state.actor == 1) ? PLAYER1_WON : PLAYER2_WON, 5);
+			break ;
+		case GAME_OVER_ACT_QUIT:
+			_print_msg((_game.state.actor == 1) ? PLAYER1_QUIT : PLAYER2_QUIT, 5);
+			break ;
+		case GAME_OVER_SERVER_CLOSED:
+			_print_msg(SERVER_CLOSED, 5);
+	}
 	_close(server_info.sockets.state);
 	_close(server_info.sockets.p1);
 	_close(server_info.sockets.p2);
@@ -401,6 +429,41 @@ static inline u8	_quit(const i32 socket) {
 	return _send_msg(socket, &msg);
 }
 
+static inline u8	_print_msg(const message_type msg, const u32 wait) {
+	const char	*_msg[3];
+
+	switch (msg) {
+		case PLAYER1_WON:
+			_msg[0] = _MSG_GAME_OVER;
+			_msg[1] = _MSG_GAME_OVER_P1_WON;
+			_msg[2] = NULL;
+			break ;
+		case PLAYER2_WON:
+			_msg[0] = _MSG_GAME_OVER;
+			_msg[1] = _MSG_GAME_OVER_P2_WON;
+			_msg[2] = NULL;
+			break ;
+		case PLAYER1_QUIT:
+			_msg[0] = _MSG_GAME_OVER;
+			_msg[1] = _MSG_P1_QUIT;
+			_msg[2] = NULL;
+			break ;
+		case PLAYER2_QUIT:
+			_msg[0] = _MSG_GAME_OVER;
+			_msg[1] = _MSG_P2_QUIT;
+			_msg[2] = NULL;
+			break ;
+		case SERVER_CLOSED:
+			_msg[0] = _MSG_GAME_OVER;
+			_msg[1] = _MSG_SERVER_CLOSED;
+			_msg[2] = NULL;
+	}
+	if (!display_msg(_msg))
+		return 0;
+	sleep(wait);
+	return 1;
+}
+
 static inline void	_close(i32 fd) {
 	if (fd >= 0)
 		close(fd);
@@ -417,6 +480,7 @@ static inline u8	_init_connection(void) {
 		return 0;
 	if (!_recv_msg(server_info.sockets.state, &msg) || msg.type != MESSAGE_SERVER_GAME_INIT)
 		return 0;
+	server_info.version = msg.version;
 	utoa16(msg.body.init.p1_port, port);
 	if (!_connect(server_info.addr, port, &server_info.sockets.p1))
 		return 0;

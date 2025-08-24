@@ -65,6 +65,7 @@ struct {
 	}	height;
 }	window_size;
 
+static inline u8	_move_to(const u32 x, const u32 y);
 static inline u8	_putc_at(const u32 x, const u32 y, const i16 hl[2], const i32 cp);
 static inline u8	_puts_at(const u32 x, const u32 y, const i16 hl[2], const char *s);
 static inline u8	_printf_at(const u32 x, const u32 y, const i16 hl[2], const char *fmt, ...);
@@ -147,7 +148,7 @@ u8	display_menu(const menu *menu) {
 		_calculate_top_left_xy((u32*[2]){&root_x, &root_y}, menu_width, menu_height);
 		fputs("\x1b[2J", stdout);
 		_draw_box(root_x - 1, root_y - 1, menu_width + 2, menu_height + 2);
-		if (fprintf(stdout, "\x1b[%hu;%huH", root_y++, root_x) == -1)
+		if (!_move_to(root_x, root_y++))
 			return 0;
 		for (current = menu->root; current; current = down) {
 			for (down = current->neighbors.down; current; current = current->neighbors.right) {
@@ -164,10 +165,50 @@ u8	display_menu(const menu *menu) {
 				if (!_pad(padding.right))
 					return 0;
 			}
-			if (fprintf(stdout, "\x1b[%hu;%huH", root_y++, root_x) == -1)
+			if (!_move_to(root_x, root_y++))
 				return 0;
 		}
 	}
+	return fflush(stdout) != EOF;
+}
+
+u8	display_msg(const char **msg) {
+	size_t	i;
+	struct {
+		size_t	left;
+		size_t	right;
+	}		padding;
+	u32		width;
+	u32		height;
+	u32		root_x;
+	u32		root_y;
+
+	for (width = height = 0; msg[height]; height++) {
+		if (strlen(msg[height]) > width)
+			width = strlen(msg[height]);
+	}
+	if (window_size.width.cells < (u32)width + 4 || window_size.height.cells < (u32)height + 2)
+		return 1;
+	_calculate_top_left_xy((u32*[2]){&root_x, &root_y}, width, height);
+	if (!_draw_box(root_x - 1, root_y - 1, width + 4, height + 2))
+		return 0;
+	if (!_move_to(root_x, root_y++))
+		return 0;
+	for (i = 0; i < height; i++) {
+		_calculate_padding(&padding.left, &padding.right, width + 2, strlen(msg[i]));
+		if (!_pad(padding.left))
+			return 0;
+		if (!set_color_fg(colors.fg))
+			return 0;
+		if (fputs(msg[i], stdout) == EOF)
+			return 0;
+		if (!_pad(padding.right))
+			return 0;
+		if (!_move_to(root_x, root_y++))
+			return 0;
+	}
+	if (!fputs("\x1b[m", stdout))
+		return 0;
 	return fflush(stdout) != EOF;
 }
 
@@ -182,8 +223,12 @@ u8	init_display(void) {
 	return 1;
 }
 
+static inline u8	_move_to(const u32 x, const u32 y) {
+	return (fprintf(stdout, "\x1b[%u;%uH", y, x) != -1) ? 1 : 0;
+}
+
 static inline u8	_putc_at(const u32 x, const u32 y, const i16 hl[2], const i32 cp) {
-	if (fprintf(stdout, "\x1b[%u;%uH", y, x) == -1)
+	if (!_move_to(x, y))
 		return 0;
 	if (hl[0] != -1 && set_color_fg(hl[0]) == -1)
 		return 0;
@@ -195,7 +240,7 @@ static inline u8	_putc_at(const u32 x, const u32 y, const i16 hl[2], const i32 c
 }
 
 static inline u8	_puts_at(const u32 x, const u32 y, const i16 hl[2], const char *s) {
-	if (fprintf(stdout, "\x1b[%u;%uH", y, x) == -1)
+	if (!_move_to(x, y))
 		return 0;
 	if (hl[0] != -1 && set_color_fg(hl[0]) == -1)
 		return 0;
@@ -210,7 +255,7 @@ static inline u8	_printf_at(const u32 x, const u32 y, const i16 hl[2], const cha
 	va_list	args;
 	ssize_t	rv;
 
-	if (fprintf(stdout, "\x1b[%u;%uH", y, x) == -1)
+	if (!_move_to(x, y))
 		return 0;
 	if (hl[0] != -1 && set_color_fg(hl[0]) == -1)
 		return 0;
@@ -402,7 +447,7 @@ static inline u8	_scroll_menu(const menu *menu, const u16 max_visible_x, const u
 	_calculate_top_left_xy((u32*[2]){&root_x, &root_y}, menu_width, menu_height);
 	fputs("\x1b[2J", stdout);
 	_draw_box(root_x - 1, root_y - 1, menu_width + 2, menu_height + 2);
-	if (fprintf(stdout, "\x1b[%hu;%huH", root_y++, root_x) == -1)
+	if (!_move_to(root_x, root_y++))
 		return 0;
 	for (current = start, i = 0; i < max_visible_y; i++) {
 		for (down = current->neighbors.down, j = 0; j < max_visible_x; j++) {
@@ -420,7 +465,7 @@ static inline u8	_scroll_menu(const menu *menu, const u16 max_visible_x, const u
 				return 0;
 			current = current->neighbors.right;
 		}
-		if (fprintf(stdout, "\x1b[%hu;%huH", root_y++, root_x) == -1)
+		if (!_move_to(root_x, root_y++))
 			return 0;
 		current = down;
 	}
