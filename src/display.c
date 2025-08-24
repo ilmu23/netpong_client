@@ -20,6 +20,13 @@
 #define set_color_fg(x)	(fprintf(stdout, "\x1b[38;5;%hhum", (u8)x))
 #define set_color_bg(x)	(fprintf(stdout, "\x1b[48;5;%hhum", (u8)x))
 
+#define _BOX_SIDE_HORIZONTAL	0x2501U
+#define _BOX_SIDE_VERTICAL		0x2503U
+#define _BOX_CORNER_TL			0x250FU
+#define _BOX_CORNER_TR			0x2513U
+#define _BOX_CORNER_BL			0x2517U
+#define _BOX_CORNER_BR			0x251BU
+
 #define _PADDLE_1Q_UP	0x28C0U
 #define _PADDLE_H_UP	0x28E4U
 #define _PADDLE_3Q_UP	0x28F6U
@@ -62,6 +69,8 @@ static inline u8	_putc_at(const u32 x, const u32 y, const i16 hl[2], const i32 c
 static inline u8	_puts_at(const u32 x, const u32 y, const i16 hl[2], const char *s);
 static inline u8	_printf_at(const u32 x, const u32 y, const i16 hl[2], const char *fmt, ...);
 
+static inline u8	_draw_box(const u32 root_x, const u32 root_y, const u32 width, const u32 height);
+
 static inline u8	_draw_paddle(const f32 paddle_pos, const u32 root_x, const u32 root_y, const u32 offset);
 static inline u8	_draw_ball(const f32 ball_pos[2], const u32 root_x, const u32 root_y);
 
@@ -75,24 +84,26 @@ static inline void	_update_window_size([[gnu::unused]] i32 sig);
 
 u8	display_game(const game *game) {
 	static const u16	width = 40 + 2;
-	static const u16	height = 20 + 2;
+	static const u16	height = 20;
 	static u8			too_small_printed = 0;
 	u32					root_x;
 	u32					root_y;
 	u32					score_x;
 	u32					score_y;
 
-	if (window_size.width.cells < width || window_size.height.cells < height) {
+	if (window_size.width.cells < (u32)width + 2 || window_size.height.cells < (u32)height + 2) {
 		if (!too_small_printed)
 			too_small_printed = (_puts_at(1, 1, (i16[2]){196, -1}, _WIN_TOO_SMALL) && fflush(stdout) != EOF) ? DISPLAY_GAME_WIN_TOO_SMALL : 0;
 		return too_small_printed;
 	}
 	too_small_printed = 0;
 	_calculate_top_left_xy((u32*[2]){&root_x, &root_y}, width, height);
+	fputs("\x1b[2J", stdout);
+	_draw_box(root_x - 1, root_y - 1, width + 2, height + 2);
 	_draw_paddle(height - game->p1_pos, root_x, root_y, 0);
 	_draw_paddle(height - game->p2_pos, root_x, root_y, width - 1);
 	_draw_ball((f32[2]){game->ball.x, height - game->ball.y}, root_x, root_y);
-	score_y = height - 1;
+	score_y = height + 2;
 	score_x = (width - 8) / 2;
 	_printf_at(root_x + score_x, root_y + score_y, (i16[2]){-1, -1}, "%-3hhu--%3hhu", game->p1_score, game->p2_score);
 	return (fflush(stdout) != EOF) ? 1 : 0;
@@ -115,13 +126,13 @@ u8	display_menu(const menu *menu) {
 
 	menu_width = menu->width * (menu->longest_title + 2);
 	menu_height = menu->height;
-	if ((menu_width * 100) / window_size.width.cells > 100 - DISPLAY_MENU_MIN_MARGIN * 2) {
+	if (((menu_width + 2) * 100) / window_size.width.cells > 100 - DISPLAY_MENU_MIN_MARGIN * 2) {
 		for (max_visible_x = menu->width - 1; max_visible_x; max_visible_x--)
 			if (((max_visible_x * (menu->longest_title + 2)) * 100) / window_size.width.cells < 100 - DISPLAY_MENU_MIN_MARGIN * 2)
 				break ;
 	} else
 		max_visible_x = menu->width;
-	if ((menu_height * 100) / window_size.height.cells > 100 - DISPLAY_MENU_MIN_MARGIN * 2) {
+	if (((menu_height + 2) * 100) / window_size.height.cells > 100 - DISPLAY_MENU_MIN_MARGIN * 2) {
 		for (max_visible_y = menu->height - 1; max_visible_y; max_visible_y--)
 			if ((max_visible_y * 100) / window_size.height.cells < 100 - DISPLAY_MENU_MIN_MARGIN * 2)
 				break ;
@@ -134,7 +145,9 @@ u8	display_menu(const menu *menu) {
 		return _scroll_menu(menu, max_visible_x, max_visible_y);
 	else {
 		_calculate_top_left_xy((u32*[2]){&root_x, &root_y}, menu_width, menu_height);
-		if (fprintf(stdout, "\x1b[%hu;%huH\x1b[2J", root_y++, root_x) == -1)
+		fputs("\x1b[2J", stdout);
+		_draw_box(root_x - 1, root_y - 1, menu_width + 2, menu_height + 2);
+		if (fprintf(stdout, "\x1b[%hu;%huH", root_y++, root_x) == -1)
 			return 0;
 		for (current = menu->root; current; current = down) {
 			for (down = current->neighbors.down; current; current = current->neighbors.right) {
@@ -211,6 +224,39 @@ static inline u8	_printf_at(const u32 x, const u32 y, const i16 hl[2], const cha
 	return fputs("\x1b[m", stdout) != EOF;
 }
 
+static inline u8	_draw_box(const u32 root_x, const u32 root_y, const u32 width, const u32 height) {
+	u32	cp;
+	u32	i;
+
+	for (i = 0; i < width; i++) {
+		if (i == 0)
+			cp = _BOX_CORNER_TL;
+		else if (i == width - 1)
+			cp = _BOX_CORNER_TR;
+		else
+			cp = _BOX_SIDE_HORIZONTAL;
+		if (!_putc_at(root_x + i, root_y, (i16[2]){colors.selection.bg, -1}, cp))
+			return 0;
+	}
+	for (i = 1; i < height - 1; i++) {
+		if (!_putc_at(root_x, root_y + i, (i16[2]){colors.selection.bg, -1}, _BOX_SIDE_VERTICAL))
+			return 0;
+		if (!_putc_at(root_x + width - 1, root_y + i, (i16[2]){colors.selection.bg, -1}, _BOX_SIDE_VERTICAL))
+			return 0;
+	}
+	for (i = 0; i < width; i++) {
+		if (i == 0)
+			cp = _BOX_CORNER_BL;
+		else if (i == width - 1)
+			cp = _BOX_CORNER_BR;
+		else
+			cp = _BOX_SIDE_HORIZONTAL;
+		if (!_putc_at(root_x + i, root_y + height - 1, (i16[2]){colors.selection.bg, -1}, cp))
+			return 0;
+	}
+	return 1;
+}
+
 static inline u8	_draw_paddle(const f32 paddle_pos, const u32 root_x, const u32 root_y, const u32 offset) {
 	static const f32	paddle_height = 1.5f;
 	size_t				dots;
@@ -223,8 +269,6 @@ static inline u8	_draw_paddle(const f32 paddle_pos, const u32 root_x, const u32 
 	f32					remainder;
 	f32					y;
 
-	if (!offset && fputs("\x1b[2J", stdout) == EOF)
-		return 0;
 	paddle.top_y = paddle_pos - paddle_height;
 	remainder = fmodf(paddle.top_y, 0.25);
 	if (remainder >= 0.25 / 2)
@@ -356,7 +400,9 @@ static inline u8	_scroll_menu(const menu *menu, const u16 max_visible_x, const u
 	menu_width = max_visible_x * (longest_title + 2);
 	menu_height = max_visible_y;
 	_calculate_top_left_xy((u32*[2]){&root_x, &root_y}, menu_width, menu_height);
-	if (fprintf(stdout, "\x1b[%hu;%huH\x1b[2J", root_y++, root_x) == -1)
+	fputs("\x1b[2J", stdout);
+	_draw_box(root_x - 1, root_y - 1, menu_width + 2, menu_height + 2);
+	if (fprintf(stdout, "\x1b[%hu;%huH", root_y++, root_x) == -1)
 		return 0;
 	for (current = start, i = 0; i < max_visible_y; i++) {
 		for (down = current->neighbors.down, j = 0; j < max_visible_x; j++) {
