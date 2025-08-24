@@ -131,6 +131,7 @@ u8	play(void) {
 		pthread_mutex_unlock(&kb_io_listener.start);
 		return 0;
 	}
+	server_info.running = 1;
 	game.p1_pos = _GAME_FIELD_Y / 2;
 	game.p2_pos = _GAME_FIELD_Y / 2;
 	game.ball.x = _GAME_FIELD_X / 2;
@@ -146,9 +147,14 @@ u8	play(void) {
 	pthread_mutex_unlock(&kb_io_listener.start);
 	do {
 		rv = _recv_msg(server_info.sockets.state, &msg);
-		if (!rv && errno == EINTR) {
-			errno = 0;
-			continue ;
+		if (!rv) {
+			if (errno == EINTR) {
+				rv = 1;
+				errno = 0;
+				continue ;
+			} else if (!server_info.running)
+				rv = 1;
+			break ;
 		}
 		switch (msg.type) {
 			case MESSAGE_SERVER_GAME_PAUSED:
@@ -183,6 +189,7 @@ u8	play(void) {
 		if (game.over)
 			break ;
 	} while (rv);
+	server_info.running = 0;
 	pthread_cancel(kb_io_listener.tid);
 	pthread_join(kb_io_listener.tid, NULL);
 	_close(server_info.sockets.state);
@@ -193,7 +200,10 @@ u8	play(void) {
 
 static void	*_kb_io_listener(void *) {
 	const kbinput_key	*event;
+
 	pthread_sigmask(SIG_BLOCK, &_SIGS, NULL);
+	pthread_mutex_lock(&kb_io_listener.start);
+	pthread_mutex_unlock(&kb_io_listener.start);
 	while (1) {
 		event = kbinput_listen(game_binds);
 		if (event)
@@ -395,8 +405,10 @@ static inline u8	_recv(const i32 socket, void *buf, const size_t n) {
 	do {
 		bytes_read = recv(socket, (void *)((uintptr_t)buf + total_read), n - total_read, MSG_WAITALL);
 		total_read += bytes_read;
-	} while (bytes_read != -1 && total_read < n);
-	return (bytes_read != -1) ? 1 : 0;
+	} while (bytes_read > 0 && total_read < n);
+	if (bytes_read == 0 && server_info.running)
+		server_info.running = 0;
+	return (bytes_read != -1 && total_read > 0) ? 1 : 0;
 }
 
 static inline u8	_send_msg(const i32 socket, const message *msg) {
