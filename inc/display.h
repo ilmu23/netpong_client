@@ -12,9 +12,11 @@
 #include "menu.h"
 #include "game.h"
 
-#ifndef DISPLAY_MIN_MARGIN
-# define DISPLAY_MIN_MARGIN	10
+#ifndef DISPLAY_MENU_MIN_MARGIN
+# define DISPLAY_MENU_MIN_MARGIN	10
 #endif
+
+#define DISPLAY_GAME_WIN_TOO_SMALL	2
 
 u8	display_game(const game *game);
 u8	display_menu(const menu *menu);

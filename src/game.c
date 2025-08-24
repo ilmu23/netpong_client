@@ -21,6 +21,8 @@
 #include "utils.h"
 #include "display.h"
 
+#define atomic	_Atomic
+
 #define _SIGS	kb_io_listener.sigs.set
 
 #define _GAME_FIELD_X	40.0f
@@ -57,7 +59,18 @@ static struct {
 		sigset_t	set;
 		u8			init;
 	}				sigs;
-}	kb_io_listener;
+}	kb_io_listener = {
+	.start = PTHREAD_MUTEX_INITIALIZER
+};
+
+static struct {
+	pthread_mutex_t	lock;
+	game			state;
+}	_game = {
+	.lock = PTHREAD_MUTEX_INITIALIZER
+};
+
+static atomic u8	display_status;
 
 struct {
 	const char	*addr;
@@ -76,14 +89,14 @@ static void	*_kb_io_listener(void *);
 
 static inline const kbinput_key	*_p1_move_paddle(const kbinput_key *event);
 static inline const kbinput_key	*_p2_move_paddle(const kbinput_key *event);
-static inline const kbinput_key	*_p1_pause(const kbinput_key *event);
-static inline const kbinput_key	*_p2_pause(const kbinput_key *event);
+static inline const kbinput_key	*_p1_toggle_pause(const kbinput_key *event);
+static inline const kbinput_key	*_p2_toggle_pause(const kbinput_key *event);
 static inline const kbinput_key	*_p1_quit(const kbinput_key *event);
 static inline const kbinput_key	*_p2_quit(const kbinput_key *event);
-static inline const kbinput_key	*_start(const kbinput_key *event);
 
 static inline u8	_move_paddle(const i32 socket, const direction direction);
-static inline u8	_pause(const i32 socket);
+static inline u8	_toggle_pause(const i32 socket);
+static inline u8	_start(const i32 socket);
 static inline u8	_quit(const i32 socket);
 
 static inline void	_close(i32 fd);
@@ -110,18 +123,17 @@ u8	setup_game_binds(void) {
 			rv ^= ~kbinput_add_listener(game_binds, kbinput_key('s', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _p1_move_paddle));
 			rv ^= ~kbinput_add_listener(game_binds, kbinput_key(KB_KEY_UP, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _p2_move_paddle));
 			rv ^= ~kbinput_add_listener(game_binds, kbinput_key(KB_KEY_DOWN, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _p2_move_paddle));
-			rv ^= ~kbinput_add_listener(game_binds, kbinput_key('p', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _p1_pause));
+			rv ^= ~kbinput_add_listener(game_binds, kbinput_key('p', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _p1_toggle_pause));
 			rv ^= ~kbinput_add_listener(game_binds, kbinput_key('q', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _p1_quit));
-			rv ^= ~kbinput_add_listener(game_binds, kbinput_key('p', KB_MOD_IGN_LCK | KB_MOD_SHIFT, KB_EVENT_PRESS, _p2_pause));
+			rv ^= ~kbinput_add_listener(game_binds, kbinput_key('p', KB_MOD_IGN_LCK | KB_MOD_SHIFT, KB_EVENT_PRESS, _p2_toggle_pause));
 			rv ^= ~kbinput_add_listener(game_binds, kbinput_key('q', KB_MOD_IGN_LCK | KB_MOD_SHIFT, KB_EVENT_PRESS, _p2_quit));
-			rv ^= ~kbinput_add_listener(game_binds, kbinput_key(KB_KEY_ENTER, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _start));
 	}
 	return rv;
 }
 
 u8	play(void) {
 	message	msg;
-	game	game;
+	u8		pause_state;
 	u8		rv;
 
 	if (!_init_connection()) {
@@ -132,63 +144,99 @@ u8	play(void) {
 		return 0;
 	}
 	server_info.running = 1;
-	game.p1_pos = _GAME_FIELD_Y / 2;
-	game.p2_pos = _GAME_FIELD_Y / 2;
-	game.ball.x = _GAME_FIELD_X / 2;
-	game.ball.y = _GAME_FIELD_Y / 2;
-	game.p1_score = 0;
-	game.p2_score = 0;
-	game.started = 0;
-	game.paused = 1;
-	game.status = 0;
-	game.actor = 0;
-	game.over = 0;
-	display_game(&game);
+	_game.state.p1_pos = _GAME_FIELD_Y / 2;
+	_game.state.p2_pos = _GAME_FIELD_Y / 2;
+	_game.state.ball.x = _GAME_FIELD_X / 2;
+	_game.state.ball.y = _GAME_FIELD_Y / 2;
+	_game.state.p1_score = 0;
+	_game.state.p2_score = 0;
+	_game.state.started = 0;
+	_game.state.paused = 0x3U;
+	_game.state.status = 0;
+	_game.state.actor = 0;
+	_game.state.over = 0;
+	display_status = display_game(&_game.state);
 	pthread_mutex_unlock(&kb_io_listener.start);
 	do {
+		errno = 0;
+		if (display_status == DISPLAY_GAME_WIN_TOO_SMALL) {
+			pthread_mutex_lock(&_game.lock);
+			display_status = display_game(&_game.state);
+			pause_state = _game.state.paused;
+			pthread_mutex_unlock(&_game.lock);
+			switch (display_status) {
+				case 0:
+					rv = 0;
+					break ;
+				case DISPLAY_GAME_WIN_TOO_SMALL:
+					if (!(pause_state & 0x1))
+						_p1_toggle_pause((void *)0x1);
+					if (!(pause_state & 0x2))
+						_p2_toggle_pause((void *)0x1);
+					continue ;
+			}
+			if (pause_state & 0x1)
+				_p1_toggle_pause((void *)0x1);
+			if (pause_state & 0x2)
+				_p2_toggle_pause((void *)0x1);
+		}
 		rv = _recv_msg(server_info.sockets.state, &msg);
 		if (!rv) {
 			if (errno == EINTR) {
 				rv = 1;
-				errno = 0;
 				continue ;
 			} else if (!server_info.running)
 				rv = 1;
 			break ;
 		}
+		pthread_mutex_lock(&_game.lock);
 		switch (msg.type) {
 			case MESSAGE_SERVER_GAME_PAUSED:
-				game.paused = 1;
 				break ;
 			case MESSAGE_SERVER_GAME_OVER:
-				game.paused = 1;
-				game.over = 1;
+				_game.state.paused = 1;
+				_game.state.over = 1;
 				switch (server_info.version) {
 					case 0:
-						game.status = GAME_OVER_ACT_WON;
-						game.actor = msg.body.game_over.v0.winner_id;
+						_game.state.status = GAME_OVER_ACT_WON;
+						_game.state.actor = msg.body.game_over.v0.winner_id;
 						break ;
 					case 1:
-						game.p1_score = msg.body.game_over.v1.score >> 8 & 0xFF;
-						game.p2_score = msg.body.game_over.v1.score & 0xFF;
-						game.status = msg.body.game_over.v1.finish_status;
-						game.actor = msg.body.game_over.v1.actor_id;
+						_game.state.p1_score = msg.body.game_over.v1.score >> 8 & 0xFF;
+						_game.state.p2_score = msg.body.game_over.v1.score & 0xFF;
+						_game.state.status = msg.body.game_over.v1.finish_status;
+						_game.state.actor = msg.body.game_over.v1.actor_id;
 				}
 				break ;
 			case MESSAGE_SERVER_STATE_UPDATE:
-				game.paused = 0;
-				game.started = 1;
-				game.p1_pos = msg.body.state.p1_paddle;
-				game.p2_pos = msg.body.state.p2_paddle;
-				game.ball.x = msg.body.state.ball.x;
-				game.ball.y = msg.body.state.ball.y;
-				game.p1_score = msg.body.state.score >> 8 & 0xFF;
-				game.p2_score = msg.body.state.score & 0xFF;
+				_game.state.paused = 0;
+				_game.state.started = 1;
+				_game.state.p1_pos = msg.body.state.p1_paddle;
+				_game.state.p2_pos = msg.body.state.p2_paddle;
+				_game.state.ball.x = msg.body.state.ball.x;
+				_game.state.ball.y = msg.body.state.ball.y;
+				_game.state.p1_score = msg.body.state.score >> 8 & 0xFF;
+				_game.state.p2_score = msg.body.state.score & 0xFF;
 		}
-		display_game(&game);
-		if (game.over)
+		display_status = display_game(&_game.state);
+		pause_state = _game.state.paused;
+		pthread_mutex_unlock(&_game.lock);
+		switch (display_status) {
+			case 0:
+				rv = 0;
+				break ;
+			case DISPLAY_GAME_WIN_TOO_SMALL:
+				if (!(pause_state & 0x1))
+					_p1_toggle_pause((void *)0x1);
+				if (!(pause_state & 0x2))
+					_p2_toggle_pause((void *)0x1);
+		}
+		pthread_mutex_lock(&_game.lock);
+		if (_game.state.over)
 			break ;
+		pthread_mutex_unlock(&_game.lock);
 	} while (rv);
+	pthread_mutex_unlock(&_game.lock);
 	server_info.running = 0;
 	pthread_cancel(kb_io_listener.tid);
 	pthread_join(kb_io_listener.tid, NULL);
@@ -206,7 +254,7 @@ static void	*_kb_io_listener(void *) {
 	pthread_mutex_unlock(&kb_io_listener.start);
 	while (1) {
 		event = kbinput_listen(game_binds);
-		if (event)
+		if (event && display_status != DISPLAY_GAME_WIN_TOO_SMALL)
 			((game_fn)event->fn)(event);
 	}
 	return NULL;
@@ -264,12 +312,38 @@ static inline const kbinput_key	*_p2_move_paddle(const kbinput_key *event) {
 	return (_move_paddle(server_info.sockets.p2, direction)) ? event : NULL;
 }
 
-static inline const kbinput_key	*_p1_pause(const kbinput_key *event) {
-	return (_pause(server_info.sockets.p1)) ? event : NULL;
+static inline const kbinput_key	*_p1_toggle_pause(const kbinput_key *event) {
+	pthread_mutex_lock(&_game.lock);
+	switch (_game.state.paused & 0x1U) {
+		case 0x0U:
+			if (!_toggle_pause(server_info.sockets.p1))
+				event = NULL;
+			break ;
+		case 0x1U:
+			if (!_start(server_info.sockets.p1))
+				event = NULL;
+	}
+	if (event != NULL)
+		_game.state.paused ^= 0x1U;
+	pthread_mutex_unlock(&_game.lock);
+	return event;
 }
 
-static inline const kbinput_key	*_p2_pause(const kbinput_key *event) {
-	return (_pause(server_info.sockets.p2)) ? event : NULL;
+static inline const kbinput_key	*_p2_toggle_pause(const kbinput_key *event) {
+	pthread_mutex_lock(&_game.lock);
+	switch (_game.state.paused & 0x2U) {
+		case 0x0U:
+			if (!_toggle_pause(server_info.sockets.p2))
+				event = NULL;
+			break ;
+		case 0x2U:
+			if (!_start(server_info.sockets.p2))
+				event = NULL;
+	}
+	if (event != NULL)
+		_game.state.paused ^= 0x2U;
+	pthread_mutex_unlock(&_game.lock);
+	return event;
 }
 
 static inline const kbinput_key	*_p1_quit(const kbinput_key *event) {
@@ -278,17 +352,6 @@ static inline const kbinput_key	*_p1_quit(const kbinput_key *event) {
 
 static inline const kbinput_key	*_p2_quit(const kbinput_key *event) {
 	return (_quit(server_info.sockets.p2)) ? event : NULL;
-}
-
-static inline const kbinput_key	*_start(const kbinput_key *event) {
-	message	msg;
-
-	msg = (message){
-		.version = server_info.version,
-		.type = MESSAGE_CLIENT_START,
-		.length = 0
-	};
-	return (_send_msg(server_info.sockets.p1, &msg) & _send_msg(server_info.sockets.p2, &msg)) ? event : NULL;
 }
 
 static inline u8	_move_paddle(const i32 socket, const direction direction) {
@@ -305,12 +368,23 @@ static inline u8	_move_paddle(const i32 socket, const direction direction) {
 	return _send_msg(socket, &msg);
 }
 
-static inline u8	_pause(const i32 socket) {
+static inline u8	_toggle_pause(const i32 socket) {
 	message	msg;
 
 	msg = (message){
 		.version = server_info.version,
 		.type = MESSAGE_CLIENT_PAUSE,
+		.length = 0
+	};
+	return _send_msg(socket, &msg);
+}
+
+static inline u8	_start(const i32 socket) {
+	message	msg;
+
+	msg = (message){
+		.version = server_info.version,
+		.type = MESSAGE_CLIENT_START,
 		.length = 0
 	};
 	return _send_msg(socket, &msg);

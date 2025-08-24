@@ -32,6 +32,8 @@
 #define _BALL_BL_FULL	0x2819U
 #define _BALL_BR_FULL	0x280BU
 
+#define _WIN_TOO_SMALL	"\x1b[H\x1b[J\x1b[1;38;5;196m[WINDOW TOO SMALL]\x1b[m"
+
 struct {
 	u8	fg;
 	struct {
@@ -69,20 +71,23 @@ static inline void	_calculate_top_left_xy(u32 *pos[2], const u16 block_width, co
 static inline void	_update_window_size([[gnu::unused]] i32 sig);
 
 u8	display_game(const game *game) {
-	static const u16	width = 42;
+	static const u16	width = 40 + 2;
 	static const u16	height = 20;
+	static u8			too_small_printed = 0;
 	u32					root_x;
 	u32					root_y;
 
 	if (window_size.width.cells < width || window_size.height.cells < height) {
-		// PAUSE GAME
-		return 0;
+		if (!too_small_printed)
+			too_small_printed = (fputs(_WIN_TOO_SMALL, stdout) != EOF && fflush(stdout) != EOF) ? DISPLAY_GAME_WIN_TOO_SMALL : 0;
+		return too_small_printed;
 	}
+	too_small_printed = 0;
 	_calculate_top_left_xy((u32*[2]){&root_x, &root_y}, width, height);
 	_draw_paddle(height - game->p1_pos, root_x, root_y, 0);
 	_draw_paddle(height - game->p2_pos, root_x, root_y, width - 1);
 	_draw_ball((f32[2]){game->ball.x, height - game->ball.y}, root_x, root_y);
-	return fflush(stdout) != EOF;
+	return (fflush(stdout) != EOF) ? 1 : 0;
 }
 
 u8	display_menu(const menu *menu) {
@@ -102,20 +107,20 @@ u8	display_menu(const menu *menu) {
 
 	menu_width = menu->width * (menu->longest_title + 2);
 	menu_height = menu->height;
-	if ((menu_width * 100) / window_size.width.cells > 100 - DISPLAY_MIN_MARGIN * 2) {
+	if ((menu_width * 100) / window_size.width.cells > 100 - DISPLAY_MENU_MIN_MARGIN * 2) {
 		for (max_visible_x = menu->width - 1; max_visible_x; max_visible_x--)
-			if (((max_visible_x * (menu->longest_title + 2)) * 100) / window_size.width.cells < 100 - DISPLAY_MIN_MARGIN * 2)
+			if (((max_visible_x * (menu->longest_title + 2)) * 100) / window_size.width.cells < 100 - DISPLAY_MENU_MIN_MARGIN * 2)
 				break ;
 	} else
 		max_visible_x = menu->width;
-	if ((menu_height * 100) / window_size.height.cells > 100 - DISPLAY_MIN_MARGIN * 2) {
+	if ((menu_height * 100) / window_size.height.cells > 100 - DISPLAY_MENU_MIN_MARGIN * 2) {
 		for (max_visible_y = menu->height - 1; max_visible_y; max_visible_y--)
-			if ((max_visible_y * 100) / window_size.height.cells < 100 - DISPLAY_MIN_MARGIN * 2)
+			if ((max_visible_y * 100) / window_size.height.cells < 100 - DISPLAY_MENU_MIN_MARGIN * 2)
 				break ;
 	} else
 		max_visible_y = menu->height;
 	if (!max_visible_x || !max_visible_y) {
-		if (fputs("\x1b[H\x1b[J\x1b[1;38;5;196m[WINDOW TOO SMALL]\x1b[m", stdout) == EOF)
+		if (fputs(_WIN_TOO_SMALL, stdout) == EOF)
 			return 0;
 	} else if (max_visible_x != menu->width || max_visible_y != menu->height)
 		return _scroll_menu(menu, max_visible_x, max_visible_y);
