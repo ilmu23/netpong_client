@@ -12,14 +12,14 @@ NAME	=	netpong
 BUILD	=	fsan
 
 CC				=	gcc
-cflags.common	=	-Wall -Wextra -Werror -Wpedantic -pedantic-errors -std=gnu2x -I$(INCDIR) -I/home/ilmu/.local/include
+cflags.common	=	-Wall -Wextra -Werror -Wpedantic -pedantic-errors -std=gnu2x -I$(INCDIR) -I$(HOME)/.local/include
 cflags.debug	=	-g
 cflags.fsan		=	$(cflags.debug) -fsanitize=address,undefined
 cflags.normal	=	-s -O1
 cflags.extra	=	
 CFLAGS			=	$(cflags.common) $(cflags.$(BUILD)) $(cflags.extra)
 
-LDFLAGS	=	-L/home/ilmu/.local/lib -lkbinput -lpthread -lm
+LDFLAGS	=	-L$(HOME)/.local/lib -lkbinput -lpthread -lm
 
 SRCDIR	=	src
 OBJDIR	=	obj
