@@ -7,6 +7,7 @@
 //
 // <<utils.c>>
 
+#include <math.h>
 #include <stdlib.h>
 
 #include "utils.h"
@@ -53,6 +54,15 @@ i32	fputc_utf8(const u32 cp, FILE *stream) {
 		return (fwrite(buf, 1, 4, stream) == 4) ? cp : EOF;
 	}
 	return EOF;
+}
+
+f32	roundf_f(const f32 n, const f32 factor) {
+	f32	remainder;
+
+	remainder = fmodf(n, factor);
+	if (remainder >= factor / 2)
+		return n - remainder + factor;
+	return n - remainder;
 }
 
 static inline size_t	_uintlen(u64 n) {

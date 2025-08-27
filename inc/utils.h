@@ -16,3 +16,5 @@
 char	*utoa16(u16 n, char *buf);
 
 i32	fputc_utf8(const u32 cp, FILE *stream);
+
+f32	roundf_f(const f32 n, const f32 factor);
