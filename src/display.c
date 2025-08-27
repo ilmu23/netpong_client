@@ -261,7 +261,7 @@ static inline u8	_printf_at(const u32 x, const u32 y, const i16 hl[2], const cha
 		return 0;
 	if (hl[1] != -1 && set_color_bg(hl[1]) == -1)
 		return 0;
-	va_start(args);
+	va_start(args, fmt);
 	rv = vfprintf(stdout, fmt, args);
 	va_end(args);
 	if (rv == -1)
