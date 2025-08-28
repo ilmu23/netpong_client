@@ -59,8 +59,7 @@ static inline u8	_check_args(const i32 ac, const char **av, u8 *direct) {
 		}
 		*direct = 1;
 	}
-	cur = av[0 + *direct];
-	for (i = 0, cur = av[1]; i < 4; i++, cur = (const char *)(uintptr_t)end + 1) {
+	for (i = 0, cur = av[0 + *direct]; i < 4; i++, cur = (const char *)(uintptr_t)end + 1) {
 		n = strtol(cur, (char **)&end, 10);
 		if (n > UINT8_MAX || cur == end || *end != ((i < 3) ? '.' : '\0')) {
 			fprintf(stderr, "Invalid address: %s\n", av[0 + *direct]);
