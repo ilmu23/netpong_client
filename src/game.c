@@ -138,6 +138,7 @@ u8	setup_game_binds(void) {
 			rv ^= ~kbinput_add_listener(game_binds, kbinput_key('s', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _p1_move_paddle));
 			rv ^= ~kbinput_add_listener(game_binds, kbinput_key(KB_KEY_UP, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _p2_move_paddle));
 			rv ^= ~kbinput_add_listener(game_binds, kbinput_key(KB_KEY_DOWN, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _p2_move_paddle));
+			break ;
 		case KB_INPUT_PROTOCOL_LEGACY:
 			rv ^= ~kbinput_add_listener(game_binds, kbinput_key('w', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _p1_move_paddle));
 			rv ^= ~kbinput_add_listener(game_binds, kbinput_key('s', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _p1_move_paddle));
