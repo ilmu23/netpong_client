@@ -134,17 +134,20 @@ u8	setup_game_binds(void) {
 			rv ^= ~kbinput_add_listener(game_binds, kbinput_key('s', KB_MOD_IGN_LCK, KB_EVENT_RELEASE, _p1_move_paddle));
 			rv ^= ~kbinput_add_listener(game_binds, kbinput_key(KB_KEY_UP, KB_MOD_IGN_LCK, KB_EVENT_RELEASE, _p2_move_paddle));
 			rv ^= ~kbinput_add_listener(game_binds, kbinput_key(KB_KEY_DOWN, KB_MOD_IGN_LCK, KB_EVENT_RELEASE, _p2_move_paddle));
-			[[fallthrough]];
-		case KB_INPUT_PROTOCOL_LEGACY:
 			rv ^= ~kbinput_add_listener(game_binds, kbinput_key('w', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _p1_move_paddle));
 			rv ^= ~kbinput_add_listener(game_binds, kbinput_key('s', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _p1_move_paddle));
 			rv ^= ~kbinput_add_listener(game_binds, kbinput_key(KB_KEY_UP, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _p2_move_paddle));
 			rv ^= ~kbinput_add_listener(game_binds, kbinput_key(KB_KEY_DOWN, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _p2_move_paddle));
-			rv ^= ~kbinput_add_listener(game_binds, kbinput_key('p', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _p1_toggle_pause));
-			rv ^= ~kbinput_add_listener(game_binds, kbinput_key('q', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _p1_quit));
-			rv ^= ~kbinput_add_listener(game_binds, kbinput_key('p', KB_MOD_IGN_LCK | KB_MOD_SHIFT, KB_EVENT_PRESS, _p2_toggle_pause));
-			rv ^= ~kbinput_add_listener(game_binds, kbinput_key('q', KB_MOD_IGN_LCK | KB_MOD_SHIFT, KB_EVENT_PRESS, _p2_quit));
+		case KB_INPUT_PROTOCOL_LEGACY:
+			rv ^= ~kbinput_add_listener(game_binds, kbinput_key('w', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _p1_move_paddle));
+			rv ^= ~kbinput_add_listener(game_binds, kbinput_key('s', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _p1_move_paddle));
+			rv ^= ~kbinput_add_listener(game_binds, kbinput_key(KB_KEY_LEGACY_UP, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _p1_move_paddle));
+			rv ^= ~kbinput_add_listener(game_binds, kbinput_key(KB_KEY_LEGACY_DOWN, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _p1_move_paddle));
 	}
+	rv ^= ~kbinput_add_listener(game_binds, kbinput_key('p', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _p1_toggle_pause));
+	rv ^= ~kbinput_add_listener(game_binds, kbinput_key('q', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _p1_quit));
+	rv ^= ~kbinput_add_listener(game_binds, kbinput_key('p', KB_MOD_IGN_LCK | KB_MOD_SHIFT, KB_EVENT_PRESS, _p2_toggle_pause));
+	rv ^= ~kbinput_add_listener(game_binds, kbinput_key('q', KB_MOD_IGN_LCK | KB_MOD_SHIFT, KB_EVENT_PRESS, _p2_quit));
 	return rv;
 }
 
@@ -332,7 +335,7 @@ static inline const kbinput_key	*_p2_move_paddle(const kbinput_key *event) {
 			}
 			break ;
 		case KB_INPUT_PROTOCOL_LEGACY:
-			if (event->code == KB_KEY_UP)
+			if (event->code == KB_KEY_LEGACY_UP)
 				direction = (direction != UP) ? UP : STOP;
 			else
 				direction = (direction != DOWN) ? DOWN : STOP;
