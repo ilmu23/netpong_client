@@ -274,7 +274,7 @@ u8	play(void) {
 	return rv;
 }
 
-static void	*_kb_io_listener(void *) {
+static void	*_kb_io_listener([[gnu::unused]] void *arg) {
 	const kbinput_key	*event;
 
 	pthread_sigmask(SIG_BLOCK, &_SIGS, NULL);
