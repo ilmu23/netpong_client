@@ -17,21 +17,18 @@
 
 #define handle_sig(sig)	((sigaction(sig, &action, NULL) != -1) ? 1 : 0)
 
-static inline u8	_check_args(const i32 ac, const char **av, u8 *direct);
+static inline u8	_check_args(const char **av);
 
 static inline void	_fatal_sig(i32 sig);
 
 static struct sigaction	action;
 
 int	main(i32 ac, char **av) {
-	u8	direct;
-
 	if (ac < 3) {
-		fprintf(stdout, "Usage: %s [-d | --direct] address port\n", PROG_NAME);
+		fprintf(stdout, "Usage: %s address port\n", PROG_NAME);
 		return 1;
 	}
-	direct = 0;
-	if (!_check_args(ac - 1, (const char **)&av[1], &direct))
+	if (!_check_args((const char **)&av[1]))
 		return 1;
 	action.sa_handler = _fatal_sig;
 	if (!handle_sig(SIGABRT) || !handle_sig(SIGALRM) || !handle_sig(SIGBUS) ||
@@ -43,32 +40,25 @@ int	main(i32 ac, char **av) {
 		!handle_sig(SIGUSR2) || !handle_sig(SIGVTALRM) ||
 		!handle_sig(SIGXCPU) || !handle_sig(SIGXFSZ))
 		return 1;
-	return main_menu(av[ac - 2], av[ac - 1], direct) ? 0 : 1;
+	return main_menu(av[1], av[2]) ? 0 : 1;
 }
 
-static inline u8	_check_args(const i32 ac, const char **av, u8 *direct) {
+static inline u8	_check_args(const char **av) {
 	const char	*end;
 	const char	*cur;
 	size_t		i;
 	i64			n;
 
-	if (ac > 2) {
-		if (strcmp(av[0], "-d") != 0 && strcmp(av[0], "--direct") != 0) {
-			fprintf(stderr, "Unrecognized option: %s\n", av[0]);
-			return 0;
-		}
-		*direct = 1;
-	}
-	for (i = 0, cur = av[0 + *direct]; i < 4; i++, cur = (const char *)(uintptr_t)end + 1) {
+	for (i = 0, cur = av[0]; i < 4; i++, cur = (const char *)(uintptr_t)end + 1) {
 		n = strtol(cur, (char **)&end, 10);
 		if (n > UINT8_MAX || cur == end || *end != ((i < 3) ? '.' : '\0')) {
-			fprintf(stderr, "Invalid address: %s\n", av[0 + *direct]);
+			fprintf(stderr, "Invalid address: %s\n", av[0]);
 			return 0;
 		}
 	}
-	n = strtol(av[1 + *direct], (char **)&end, 10);
-	if (n > UINT16_MAX || av[1 + *direct] == end || *end != '\0') {
-		fprintf(stderr, "Invalid port: %s\n", av[1 + *direct]);
+	n = strtol(av[1], (char **)&end, 10);
+	if (n > UINT16_MAX || av[1] == end || *end != '\0') {
+		fprintf(stderr, "Invalid port: %s\n", av[1]);
 		return 0;
 	}
 	return 1;

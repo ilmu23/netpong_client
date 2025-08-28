@@ -40,7 +40,6 @@ extern struct {
 	}	sockets;
 	u8	srv_version;
 	u8	running;
-	u8	direct;
 }	server_info;
 
 extern struct {
@@ -76,7 +75,7 @@ static inline void	_set_fg_color(const uintptr_t val);
 static inline void	_set_selection_fg_color(const uintptr_t val);
 static inline void	_set_selection_bg_color(const uintptr_t val);
 
-static inline u8	_init(const char *server_addr, const char *server_port, const u8 direct);
+static inline u8	_init(const char *server_addr, const char *server_port);
 static inline u8	_setup_menu_binds(void);
 
 static inline void	_free_menu(menu *menu);
@@ -108,11 +107,11 @@ static const char	*color_codes[_COLOR_CODE_COUNT] = {
 	"246", "247", "248", "249", "250", "251", "252", "253", "254", "255"
 };
 
-u8	main_menu(const char *server_addr, const char *server_port, const u8 direction) {
+u8	main_menu(const char *server_addr, const char *server_port) {
 	const kbinput_key	*event;
 	u8					rv;
 
-	if (!_init(server_addr, server_port, direction))
+	if (!_init(server_addr, server_port))
 		return 0;
 	rv = 1;
 	kbinput_set_cursor_mode(OFF);
@@ -225,7 +224,7 @@ static inline void	_set_selection_bg_color(const uintptr_t val) {
 	colors.selection.bg = val;
 }
 
-static inline u8	_init(const char *server_addr, const char *server_port, const u8 direct) {
+static inline u8	_init(const char *server_addr, const char *server_port) {
 	if (write(1, _TERM_ALT_SCREEN, sizeof(_TERM_ALT_SCREEN)) != sizeof(_TERM_ALT_SCREEN))
 		return 0;
 	kbinput_init();
@@ -243,7 +242,6 @@ static inline u8	_init(const char *server_addr, const char *server_port, const u
 		return 0;
 	server_info.addr = server_addr;
 	server_info.port = server_port;
-	server_info.direct = direct;
 	return init_display();
 }
 
