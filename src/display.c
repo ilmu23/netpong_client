@@ -35,10 +35,10 @@
 #define _PADDLE_H_DOWN	0x281BU
 #define _PADDLE_1Q_DOWN	0x2809U
 
-#define _BALL_TL_FULL	0x28E0U
-#define _BALL_TR_FULL	0x28C4U
-#define _BALL_BL_FULL	0x2819U
-#define _BALL_BR_FULL	0x280BU
+#define _BALL_TL	0x28E0U
+#define _BALL_TR	0x28C4U
+#define _BALL_BL	0x2819U
+#define _BALL_BR	0x280BU
 
 #define _WIN_TOO_SMALL	"\x1b[2J[WINDOW TOO SMALL]"
 
@@ -383,10 +383,10 @@ static inline u8	_draw_ball(const f32 ball_pos[2], const u32 root_x, const u32 r
 
 	ball_root_x = (u32)floorf(ball_pos[0] - ball_radius);
 	ball_root_y = (u32)floorf(ball_pos[1] - ball_radius);
-	_putc_at(root_x + ball_root_x + 1, root_y + ball_root_y, (i16[2]){colors.selection.bg, -1}, _BALL_TL_FULL);
-	_putc_at(root_x + ball_root_x + 2, root_y + ball_root_y, (i16[2]){colors.selection.bg, -1}, _BALL_TR_FULL);
-	_putc_at(root_x + ball_root_x + 1, root_y + ball_root_y + 1, (i16[2]){colors.selection.bg, -1}, _BALL_BL_FULL);
-	_putc_at(root_x + ball_root_x + 2, root_y + ball_root_y + 1, (i16[2]){colors.selection.bg, -1}, _BALL_BR_FULL);
+	_putc_at(root_x + ball_root_x + 1, root_y + ball_root_y, (i16[2]){colors.selection.bg, -1}, _BALL_TL);
+	_putc_at(root_x + ball_root_x + 2, root_y + ball_root_y, (i16[2]){colors.selection.bg, -1}, _BALL_TR);
+	_putc_at(root_x + ball_root_x + 1, root_y + ball_root_y + 1, (i16[2]){colors.selection.bg, -1}, _BALL_BL);
+	_putc_at(root_x + ball_root_x + 2, root_y + ball_root_y + 1, (i16[2]){colors.selection.bg, -1}, _BALL_BR);
 	return 1;
 }
 
