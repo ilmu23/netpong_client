@@ -348,12 +348,6 @@ static inline u8	_setup_menus(void) {
 	menus.colors.selection.fg->current = menus.colors.selection.fg->root;
 	menus.colors.selection.bg->current = menus.colors.selection.bg->root;
 	tmp = menus.main->root;
-	if (!_add_below(tmp, _new_item("Login", NULL, __LOGIN_MENU__, LOGIN, NULL, 0)))
-		return 0;
-	menus.main->height++;
-	tmp = tmp->neighbors.down;
-	if (strlen(tmp->title) > menus.main->longest_title)
-		menus.main->longest_title = strlen(tmp->title);
 	if (!_add_below(tmp, _new_item("Set Foregroung Color", NULL, menus.colors.fg, ENTER_MENU, NULL, 0)))
 		return 0;
 	menus.main->height++;
