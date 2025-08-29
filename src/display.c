@@ -48,10 +48,16 @@ struct {
 		u8	fg;
 		u8	bg;
 	}	selection;
+	u8	paddle;
+	u8	ball;
+	u8	edge;
 }	colors = {
 	.fg= 231,
 	.selection.fg = 16,
-	.selection.bg = 231
+	.selection.bg = 231,
+	.paddle = 231,
+	.ball = 231,
+	.edge = 231
 };
 
 struct {
@@ -280,13 +286,13 @@ static inline u8	_draw_box(const u32 root_x, const u32 root_y, const u32 width, 
 			cp = _BOX_CORNER_TR;
 		else
 			cp = _BOX_SIDE_HORIZONTAL;
-		if (!_putc_at(root_x + i, root_y, (i16[2]){colors.selection.bg, -1}, cp))
+		if (!_putc_at(root_x + i, root_y, (i16[2]){colors.edge, -1}, cp))
 			return 0;
 	}
 	for (i = 1; i < height - 1; i++) {
-		if (!_putc_at(root_x, root_y + i, (i16[2]){colors.selection.bg, -1}, _BOX_SIDE_VERTICAL))
+		if (!_putc_at(root_x, root_y + i, (i16[2]){colors.edge, -1}, _BOX_SIDE_VERTICAL))
 			return 0;
-		if (!_putc_at(root_x + width - 1, root_y + i, (i16[2]){colors.selection.bg, -1}, _BOX_SIDE_VERTICAL))
+		if (!_putc_at(root_x + width - 1, root_y + i, (i16[2]){colors.edge, -1}, _BOX_SIDE_VERTICAL))
 			return 0;
 	}
 	for (i = 0; i < width; i++) {
@@ -296,7 +302,7 @@ static inline u8	_draw_box(const u32 root_x, const u32 root_y, const u32 width, 
 			cp = _BOX_CORNER_BR;
 		else
 			cp = _BOX_SIDE_HORIZONTAL;
-		if (!_putc_at(root_x + i, root_y + height - 1, (i16[2]){colors.selection.bg, -1}, cp))
+		if (!_putc_at(root_x + i, root_y + height - 1, (i16[2]){colors.edge, -1}, cp))
 			return 0;
 	}
 	return 1;
@@ -345,7 +351,7 @@ static inline u8	_draw_paddle(const f32 paddle_pos, const u32 root_x, const u32 
 	paddle.top_y = floorf(paddle.top_y);
 	for (i = dots = 0; dots < 12; i++) {
 		if (i == 0) {
-			if (!_putc_at(root_x + offset, root_y + (u32)paddle.top_y, (i16[2]){colors.selection.bg, -1}, paddle.top_char))
+			if (!_putc_at(root_x + offset, root_y + (u32)paddle.top_y, (i16[2]){colors.paddle, -1}, paddle.top_char))
 				return 0;
 			switch (paddle.top_char) {
 				case _PADDLE_FULL:
@@ -363,12 +369,12 @@ static inline u8	_draw_paddle(const f32 paddle_pos, const u32 root_x, const u32 
 		} else {
 			if (dots > 8) switch (dots) {
 				case 9:
-					return _putc_at(root_x + offset, root_y + (i32)paddle.top_y + i, (i16[2]){colors.selection.bg, -1}, _PADDLE_3Q_DOWN);
+					return _putc_at(root_x + offset, root_y + (i32)paddle.top_y + i, (i16[2]){colors.paddle, -1}, _PADDLE_3Q_DOWN);
 				case 10:
-					return _putc_at(root_x + offset, root_y + (i32)paddle.top_y + i, (i16[2]){colors.selection.bg, -1}, _PADDLE_H_DOWN);
+					return _putc_at(root_x + offset, root_y + (i32)paddle.top_y + i, (i16[2]){colors.paddle, -1}, _PADDLE_H_DOWN);
 				case 11:
-					return _putc_at(root_x + offset, root_y + (i32)paddle.top_y + i, (i16[2]){colors.selection.bg, -1}, _PADDLE_1Q_DOWN);
-			} else if (!_putc_at(root_x + offset, root_y + (i32)paddle.top_y + i, (i16[2]){colors.selection.bg, -1}, _PADDLE_FULL))
+					return _putc_at(root_x + offset, root_y + (i32)paddle.top_y + i, (i16[2]){colors.paddle, -1}, _PADDLE_1Q_DOWN);
+			} else if (!_putc_at(root_x + offset, root_y + (i32)paddle.top_y + i, (i16[2]){colors.paddle, -1}, _PADDLE_FULL))
 				return 0;
 			dots += 4;
 		}
@@ -383,10 +389,10 @@ static inline u8	_draw_ball(const f32 ball_pos[2], const u32 root_x, const u32 r
 
 	ball_root_x = (u32)floorf(ball_pos[0] - ball_radius);
 	ball_root_y = (u32)floorf(ball_pos[1] - ball_radius);
-	_putc_at(root_x + ball_root_x + 1, root_y + ball_root_y, (i16[2]){colors.selection.bg, -1}, _BALL_TL);
-	_putc_at(root_x + ball_root_x + 2, root_y + ball_root_y, (i16[2]){colors.selection.bg, -1}, _BALL_TR);
-	_putc_at(root_x + ball_root_x + 1, root_y + ball_root_y + 1, (i16[2]){colors.selection.bg, -1}, _BALL_BL);
-	_putc_at(root_x + ball_root_x + 2, root_y + ball_root_y + 1, (i16[2]){colors.selection.bg, -1}, _BALL_BR);
+	_putc_at(root_x + ball_root_x + 1, root_y + ball_root_y, (i16[2]){colors.ball, -1}, _BALL_TL);
+	_putc_at(root_x + ball_root_x + 2, root_y + ball_root_y, (i16[2]){colors.ball, -1}, _BALL_TR);
+	_putc_at(root_x + ball_root_x + 1, root_y + ball_root_y + 1, (i16[2]){colors.ball, -1}, _BALL_BL);
+	_putc_at(root_x + ball_root_x + 2, root_y + ball_root_y + 1, (i16[2]){colors.ball, -1}, _BALL_BR);
 	return 1;
 }
 

@@ -48,6 +48,9 @@ extern struct {
 		u8	fg;
 		u8	bg;
 	}	selection;
+	u8	paddle;
+	u8	ball;
+	u8	edge;
 }	colors;
 
 kbinput_listener_id	menu_binds;
@@ -56,12 +59,16 @@ u8					kb_protocol;
 
 struct {
 	menu	*main;
+	menu	*options;
 	struct {
 		menu	*fg;
 		struct {
 			menu	*fg;
 			menu	*bg;
-		}	selection;
+		}		selection;
+		menu	*paddle;
+		menu	*ball;
+		menu	*edge;
 	}		colors;
 	menu	*current;
 }	menus;
@@ -74,13 +81,16 @@ static inline const kbinput_key	*_quit(const kbinput_key *event);
 static inline void	_set_fg_color(const uintptr_t val);
 static inline void	_set_selection_fg_color(const uintptr_t val);
 static inline void	_set_selection_bg_color(const uintptr_t val);
+static inline void	_set_paddle_color(const uintptr_t val);
+static inline void	_set_ball_color(const uintptr_t val);
+static inline void	_set_edge_color(const uintptr_t val);
 
 static inline u8	_init(const char *server_addr, const char *server_port);
 static inline u8	_setup_menu_binds(void);
 
 static inline void	_free_menu(menu *menu);
 static inline u8	_setup_menus(void);
-static inline u8	_setup_colormenu(menu *menu, opt_setter setter);
+static inline u8	_setup_colormenu(menu *_menu, const menu *prev, opt_setter setter);
 
 static inline menu_item	*_new_item(const char *title, const menu *prev, const menu *next, const menu_action action, opt_setter setter, const uintptr_t opt_val);
 static inline u8		_add_right(menu_item *ref, menu_item *new);
@@ -194,7 +204,9 @@ static inline const kbinput_key	*_select(const kbinput_key *event) {
 			break ;
 		case SELECT_OPTION:
 			menus.current->current->option.set(menus.current->current->option.val);
-			menus.current = (menu *)menus.current->current->prev;
+			[[fallthrough]];
+		case BACK:
+			_back(event);
 			break ;
 		case EXIT:
 			return NULL;
@@ -222,6 +234,18 @@ static inline void	_set_selection_fg_color(const uintptr_t val) {
 
 static inline void	_set_selection_bg_color(const uintptr_t val) {
 	colors.selection.bg = val;
+}
+
+static inline void	_set_paddle_color(const uintptr_t val) {
+	colors.paddle = val;
+}
+
+static inline void	_set_ball_color(const uintptr_t val) {
+	colors.ball = val;
+}
+
+static inline void	_set_edge_color(const uintptr_t val) {
+	colors.edge = val;
 }
 
 static inline u8	_init(const char *server_addr, const char *server_port) {
@@ -312,10 +336,15 @@ static inline u8	_setup_menus(void) {
 	menu_item	*tmp;
 
 	menus.main = malloc(sizeof(*menus.main));
+	menus.options = malloc(sizeof(*menus.options));
 	menus.colors.fg = malloc(sizeof(*menus.colors.fg));
 	menus.colors.selection.fg = malloc(sizeof(*menus.colors.selection.fg));
 	menus.colors.selection.bg = malloc(sizeof(*menus.colors.selection.bg));
-	if (!menus.main || !menus.colors.fg || !menus.colors.selection.fg || !menus.colors.selection.bg)
+	menus.colors.paddle = malloc(sizeof(*menus.colors.paddle));
+	menus.colors.ball = malloc(sizeof(*menus.colors.ball));
+	menus.colors.edge = malloc(sizeof(*menus.colors.edge));
+	if (!menus.main || !menus.options || !menus.colors.fg || !menus.colors.selection.fg ||
+		!menus.colors.selection.bg || !menus.colors.paddle || !menus.colors.ball || !menus.colors.edge)
 		return 0;
 	*menus.main = (menu){
 		.root = _new_item("Start Game", NULL, NULL, PLAY, NULL, 0),
@@ -323,44 +352,62 @@ static inline u8	_setup_menus(void) {
 		.height = 1,
 		.longest_title = strlen("Start Game")
 	};
+	*menus.options = (menu){
+		.root = _new_item("Set Foreground Color", menus.main, menus.colors.fg, ENTER_MENU, NULL, 0),
+		.width = 1,
+		.height = 1,
+		.longest_title = strlen("Set Foreground Color")
+	};
 	*menus.colors.fg = (menu){
-		.root = _new_item(color_codes[0], menus.main, NULL, SELECT_OPTION, _set_fg_color, 0),
+		.root = _new_item(color_codes[0], menus.options, NULL, SELECT_OPTION, _set_fg_color, 0),
 		.width = 8,
 		.height = 1,
 		.longest_title = 3
 	};
 	*menus.colors.selection.fg = (menu){
-		.root = _new_item(color_codes[0], menus.main, NULL, SELECT_OPTION, _set_selection_fg_color, 0),
+		.root = _new_item(color_codes[0], menus.options, NULL, SELECT_OPTION, _set_selection_fg_color, 0),
 		.width = 8,
 		.height = 1,
 		.longest_title = 3
 	};
 	*menus.colors.selection.bg = (menu){
-		.root = _new_item(color_codes[0], menus.main, NULL, SELECT_OPTION, _set_selection_bg_color, 0),
+		.root = _new_item(color_codes[0], menus.options, NULL, SELECT_OPTION, _set_selection_bg_color, 0),
 		.width = 8,
 		.height = 1,
 		.longest_title = 3
 	};
-	if (!menus.main->root || !menus.colors.fg->root || !menus.colors.selection.fg || !menus.colors.selection.bg)
+	*menus.colors.paddle = (menu){
+		.root = _new_item(color_codes[0], menus.options, NULL, SELECT_OPTION, _set_paddle_color, 0),
+		.width = 8,
+		.height = 1,
+		.longest_title = 3
+	};
+	*menus.colors.ball = (menu){
+		.root = _new_item(color_codes[0], menus.options, NULL, SELECT_OPTION, _set_ball_color, 0),
+		.width = 8,
+		.height = 1,
+		.longest_title = 3
+	};
+	*menus.colors.edge = (menu){
+		.root = _new_item(color_codes[0], menus.options, NULL, SELECT_OPTION, _set_edge_color, 0),
+		.width = 8,
+		.height = 1,
+		.longest_title = 3
+	};
+	if (!menus.main->root || !menus.options->root || !menus.colors.fg->root ||
+		!menus.colors.selection.fg->root || !menus.colors.selection.bg || !menus.colors.paddle->root ||
+		!menus.colors.ball->root || !menus.colors.edge)
 		return 0;
 	menus.main->current = menus.main->root;
+	menus.options->current = menus.options->root;
 	menus.colors.fg->current = menus.colors.fg->root;
 	menus.colors.selection.fg->current = menus.colors.selection.fg->root;
 	menus.colors.selection.bg->current = menus.colors.selection.bg->root;
+	menus.colors.paddle->current = menus.colors.paddle->root;
+	menus.colors.ball->current = menus.colors.ball->root;
+	menus.colors.edge->current = menus.colors.edge->root;
 	tmp = menus.main->root;
-	if (!_add_below(tmp, _new_item("Set Foregroung Color", NULL, menus.colors.fg, ENTER_MENU, NULL, 0)))
-		return 0;
-	menus.main->height++;
-	tmp = tmp->neighbors.down;
-	if (strlen(tmp->title) > menus.main->longest_title)
-		menus.main->longest_title = strlen(tmp->title);
-	if (!_add_below(tmp, _new_item("Set Selection Foreground Color", NULL, menus.colors.selection.fg, ENTER_MENU, NULL, 0)))
-		return 0;
-	menus.main->height++;
-	tmp = tmp->neighbors.down;
-	if (strlen(tmp->title) > menus.main->longest_title)
-		menus.main->longest_title = strlen(tmp->title);
-	if (!_add_below(tmp, _new_item("Set Selection Background Color", NULL, menus.colors.selection.bg, ENTER_MENU, NULL, 0)))
+	if (!_add_below(tmp, _new_item("Options", NULL, menus.options, ENTER_MENU, NULL, 0)))
 		return 0;
 	menus.main->height++;
 	tmp = tmp->neighbors.down;
@@ -372,31 +419,75 @@ static inline u8	_setup_menus(void) {
 	tmp = tmp->neighbors.down;
 	if (strlen(tmp->title) > menus.main->longest_title)
 		menus.main->longest_title = strlen(tmp->title);
+	tmp = menus.options->root;
+	if (!_add_below(tmp, _new_item("Set Selection Foreground Color", menus.options, menus.colors.selection.fg, ENTER_MENU, NULL, 0)))
+		return 0;
+	menus.options->height++;
+	tmp = tmp->neighbors.down;
+	if (strlen(tmp->title) > menus.options->longest_title)
+		menus.options->longest_title = strlen(tmp->title);
+	if (!_add_below(tmp, _new_item("Set Selection Background Color", menus.options, menus.colors.selection.bg, ENTER_MENU, NULL, 0)))
+		return 0;
+	menus.options->height++;
+	tmp = tmp->neighbors.down;
+	if (strlen(tmp->title) > menus.options->longest_title)
+		menus.options->longest_title = strlen(tmp->title);
+	if (!_add_below(tmp, _new_item("Set Paddle Color", menus.options, menus.colors.paddle, ENTER_MENU, NULL, 0)))
+		return 0;
+	menus.options->height++;
+	tmp = tmp->neighbors.down;
+	if (strlen(tmp->title) > menus.options->longest_title)
+		menus.options->longest_title = strlen(tmp->title);
+	if (!_add_below(tmp, _new_item("Set Ball Color", menus.options, menus.colors.ball, ENTER_MENU, NULL, 0)))
+		return 0;
+	menus.options->height++;
+	tmp = tmp->neighbors.down;
+	if (strlen(tmp->title) > menus.options->longest_title)
+		menus.options->longest_title = strlen(tmp->title);
+	if (!_add_below(tmp, _new_item("Set Edge Color", menus.options, menus.colors.edge, ENTER_MENU, NULL, 0)))
+		return 0;
+	menus.options->height++;
+	tmp = tmp->neighbors.down;
+	if (strlen(tmp->title) > menus.options->longest_title)
+		menus.options->longest_title = strlen(tmp->title);
+	if (!_add_below(tmp, _new_item("Back", menus.main, NULL, BACK, NULL, 0)))
+		return 0;
+	menus.options->height++;
+	tmp = tmp->neighbors.down;
+	if (strlen(tmp->title) > menus.options->longest_title)
+		menus.options->longest_title = strlen(tmp->title);
 	menus.colors.selection.bg->root->selected = 1;
 	menus.colors.selection.fg->root->selected = 1;
+	menus.colors.paddle->root->selected = 1;
+	menus.colors.ball->root->selected = 1;
+	menus.colors.edge->root->selected = 1;
 	menus.colors.fg->root->selected = 1;
+	menus.options->root->selected = 1;
 	menus.main->root->selected = 1;
 	menus.current = menus.main;
-	return _setup_colormenu(menus.colors.fg, _set_fg_color)
-		&& _setup_colormenu(menus.colors.selection.fg, _set_selection_fg_color)
-		&& _setup_colormenu(menus.colors.selection.bg, _set_selection_bg_color);
+	return _setup_colormenu(menus.colors.fg, menus.options, _set_fg_color)
+		&& _setup_colormenu(menus.colors.selection.fg, menus.options, _set_selection_fg_color)
+		&& _setup_colormenu(menus.colors.selection.bg, menus.options, _set_selection_bg_color)
+		&& _setup_colormenu(menus.colors.paddle, menus.options, _set_paddle_color)
+		&& _setup_colormenu(menus.colors.ball, menus.options, _set_ball_color)
+		&& _setup_colormenu(menus.colors.edge, menus.options, _set_edge_color);
 }
 
-static inline u8	_setup_colormenu(menu *menu, opt_setter setter) {
+static inline u8	_setup_colormenu(menu *_menu, const menu *prev, opt_setter setter) {
 	menu_item	*down;
 	menu_item	*tmp;
 	size_t		i;
 
-	for (i = 1, tmp = down = menu->root; i < _COLOR_CODE_COUNT; i++) {
+	for (i = 1, tmp = down = _menu->root; i < _COLOR_CODE_COUNT; i++) {
 		if (i && i % 8) {
-			if (!_add_right(tmp, _new_item(color_codes[i], menus.main, NULL, SELECT_OPTION, setter, i)))
+			if (!_add_right(tmp, _new_item(color_codes[i], prev, NULL, SELECT_OPTION, setter, i)))
 				return 0;
 			tmp = tmp->neighbors.right;
 		} else {
-			if (!_add_below(down, _new_item(color_codes[i], menus.main, NULL, SELECT_OPTION, setter, i)))
+			if (!_add_below(down, _new_item(color_codes[i], prev, NULL, SELECT_OPTION, setter, i)))
 				return 0;
 			down = down->neighbors.down;
-			menu->height++;
+			_menu->height++;
 			tmp = down;
 		}
 	}

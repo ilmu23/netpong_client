@@ -19,6 +19,7 @@ typedef enum __menu_action {
 	LOGIN,
 	ENTER_MENU,
 	SELECT_OPTION,
+	BACK,
 	EXIT
 }	menu_action;
 
