@@ -330,8 +330,6 @@ static inline void	_free_menu(menu *menu) {
 	free(menu);
 }
 
-#define __LOGIN_MENU__	NULL
-
 static inline u8	_setup_menus(void) {
 	menu_item	*tmp;
 
