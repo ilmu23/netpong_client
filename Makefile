@@ -9,7 +9,7 @@
 
 NAME	=	netpong
 
-BUILD	=	fsan
+BUILD	=	normal
 
 CC				=	gcc
 cflags.common	=	-Wall -Wextra -Werror -Wpedantic -pedantic-errors -std=gnu2x -I$(INCDIR) -I$(HOME)/.local/include
