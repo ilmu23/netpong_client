@@ -480,6 +480,7 @@ static inline u8	_init_connection(void) {
 	server_info.sockets.p1 = -1;
 	server_info.sockets.p2 = -1;
 	server_info.sockets.state = -1;
+	pthread_mutex_lock(&kb_io_listener.start);
 	if (!_connect(server_info.addr, server_info.port, &server_info.sockets.state))
 		return 0;
 	if (!_recv_msg(server_info.sockets.state, &msg) || msg.type != MESSAGE_SERVER_GAME_INIT)
@@ -505,7 +506,6 @@ static inline u8	_init_connection(void) {
 			return 0;
 		kb_io_listener.sigs.init = 1;
 	}
-	pthread_mutex_lock(&kb_io_listener.start);
 	return (pthread_create(&kb_io_listener.tid, NULL, _kb_io_listener, NULL) == 0) ? 1 : 0;
 }
 
