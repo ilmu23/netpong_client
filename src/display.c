@@ -193,15 +193,16 @@ u8	display_msg(const char **msg) {
 		if (strlen(msg[height]) > width)
 			width = strlen(msg[height]);
 	}
-	if (window_size.width.cells < (u32)width + 4 || window_size.height.cells < (u32)height + 2)
+	width += 2;
+	if (window_size.width.cells < (u32)width + 2 || window_size.height.cells < (u32)height + 2)
 		return 1;
 	_calculate_top_left_xy((u32*[2]){&root_x, &root_y}, width, height);
-	if (!_draw_box(root_x - 1, root_y - 1, width + 4, height + 2))
+	if (!_draw_box(root_x - 1, root_y - 1, width + 2, height + 2))
 		return 0;
 	if (!_move_to(root_x, root_y++))
 		return 0;
 	for (i = 0; i < height; i++) {
-		_calculate_padding(&padding.left, &padding.right, width + 2, strlen(msg[i]));
+		_calculate_padding(&padding.left, &padding.right, width, strlen(msg[i]));
 		if (!_pad(padding.left))
 			return 0;
 		if (!set_color_fg(colors.fg))
