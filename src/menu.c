@@ -256,7 +256,7 @@ static inline u8	_init(const char *server_addr, const char *server_port) {
 		return 0;
 	kbinput_init();
 	kb_protocol = kbinput_get_input_protocol();
-	if (kb_protocol == KB_INPUT_PROTOCOL_ERROR)
+	if (kb_protocol != KB_INPUT_PROTOCOL_KITTY)
 		return 0;
 	menu_binds = kbinput_new_listener();
 	game_binds = kbinput_new_listener();
