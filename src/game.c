@@ -261,7 +261,7 @@ u8	play(void) {
 	server_info.running = 0;
 	pthread_cancel(kb_io_listener.tid);
 	pthread_join(kb_io_listener.tid, NULL);
-	write(1, "\x1b[=0u", 5);
+	rv = (write(1, "\x1b[=0u", 5) == 5) ? 1 : 0;
 	switch (_game.state.status) {
 		case GAME_OVER_ACT_WON:
 			_print_msg((_game.state.actor == 1) ? PLAYER1_WON : PLAYER2_WON, 5);

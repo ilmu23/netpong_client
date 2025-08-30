@@ -416,7 +416,7 @@ static inline u8	_scroll_menu(const menu *menu, const u16 max_visible_x, const u
 	u16				start_row;
 	u16				start_col;
 
-	for (selection_row = 1, current = menu->root; current; current = down, selection_row++) {
+	for (selection_row = selection_col = 1, current = menu->root; current; current = down, selection_row++) {
 		for (selection_col = 1, down =current->neighbors.down; current; current = current->neighbors.right, selection_col++)
 			if (current->selected)
 				break ;

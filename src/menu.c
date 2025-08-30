@@ -149,7 +149,7 @@ u8	main_menu(const char *server_addr, const char *server_port) {
 
 void	cleanup(void) {
 	kbinput_cleanup();
-	write(1, _TERM_MAIN_SCREEN, sizeof(_TERM_MAIN_SCREEN));
+	if (write(1, _TERM_MAIN_SCREEN, sizeof(_TERM_MAIN_SCREEN)) == -1) { ; }
 	_free_menu(menus.colors.selection.bg);
 	_free_menu(menus.colors.selection.fg);
 	_free_menu(menus.colors.fg);
@@ -179,6 +179,9 @@ static inline const kbinput_key	*_navigate(const kbinput_key *event) {
 		case 'd':
 		case KB_KEY_RIGHT:
 			next = menus.current->current->neighbors.right;
+			break ;
+		default:
+			next = NULL;
 	}
 	if (next) {
 		menus.current->current->selected = 0;
