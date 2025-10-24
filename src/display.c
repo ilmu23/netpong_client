@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <signal.h>
 #include <stdarg.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
 
@@ -42,6 +43,13 @@
 
 #define _WIN_TOO_SMALL	"\x1b[2J[WINDOW TOO SMALL]"
 
+#define _COLORS_FG_DEFAULT				231
+#define _COLORS_SELECTION_FG_DEFAULT	16
+#define _COLORS_SELECTION_BG_DEFAULT	231
+#define _COLORS_PADDLE_DEFAULT			_COLORS_FG_DEFAULT
+#define _COLORS_BALL_DEFAULT			_COLORS_FG_DEFAULT
+#define _COLORS_EDGE_DEFAULT			_COLORS_FG_DEFAULT
+
 struct {
 	u8	fg;
 	struct {
@@ -51,14 +59,7 @@ struct {
 	u8	paddle;
 	u8	ball;
 	u8	edge;
-}	colors = {
-	.fg= 231,
-	.selection.fg = 16,
-	.selection.bg = 231,
-	.paddle = 231,
-	.ball = 231,
-	.edge = 231
-};
+}	colors;
 
 struct {
 	struct {
@@ -221,12 +222,32 @@ u8	display_msg(const char **msg) {
 
 u8	init_display(void) {
 	struct sigaction	action;
+	const char			*tmp;
+	u64					n;
 
 	memset(&action, 0, sizeof(action));;
 	action.sa_handler = _update_window_size;
 	if (sigaction(SIGWINCH, &action, NULL) == -1)
 		return 0;
 	_update_window_size(0);
+	tmp = getenv("NETPONG_FG_COLOR");
+	n = (tmp) ? strtoul(tmp, NULL, 10) : UINT64_MAX;
+	colors.fg = (n <= UINT8_MAX) ? n : _COLORS_FG_DEFAULT;
+	tmp = getenv("NETPONG_SELECTION_FG_COLOR");
+	n = (tmp) ? strtoul(tmp, NULL, 10) : UINT64_MAX;
+	colors.selection.fg = (n <= UINT8_MAX) ? n : _COLORS_SELECTION_FG_DEFAULT;
+	tmp = getenv("NETPONG_SELECTION_BG_COLOR");
+	n = (tmp) ? strtoul(tmp, NULL, 10) : UINT64_MAX;
+	colors.selection.bg = (n <= UINT8_MAX) ? n : _COLORS_SELECTION_BG_DEFAULT;
+	tmp = getenv("NETPONG_PADDLE_COLOR");
+	n = (tmp) ? strtoul(tmp, NULL, 10) : UINT64_MAX;
+	colors.paddle = (n <= UINT8_MAX) ? n : _COLORS_PADDLE_DEFAULT;
+	tmp = getenv("NETPONG_BALL_COLOR");
+	n = (tmp) ? strtoul(tmp, NULL, 10) : UINT64_MAX;
+	colors.ball = (n <= UINT8_MAX) ? n : _COLORS_BALL_DEFAULT;
+	tmp = getenv("NETPONG_EDGE_COLOR");
+	n = (tmp) ? strtoul(tmp, NULL, 10) : UINT64_MAX;
+	colors.edge = (n <= UINT8_MAX) ? n : _COLORS_EDGE_DEFAULT;
 	return 1;
 }
 
