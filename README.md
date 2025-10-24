@@ -11,8 +11,8 @@ netpong is a terminal client for the [pong server](https://github.com/ilmu23/net
 0. Install [libkbinput](https://github.com/ilmu23/kbinput)
 1. Clone the repository and run make
     ```bash
-    git clone https://github.com/ilmu23/netpong_server
-    cd netpong_server
+    git clone https://github.com/ilmu23/netpong_client
+    cd netpong_client
     make
     ```
 ## Usage
