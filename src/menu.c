@@ -302,8 +302,8 @@ static inline u8	_setup_menu_binds(void) {
 			rv &= kbinput_add_listener(menu_binds, kbinput_key('d', KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
 			rv &= kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_UP, KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
 			rv &= kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_DOWN, KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
-			rv &= kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_LEFT, KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate)); rv ^= ~kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_RIGHT, KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
-			rv &= kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_RIGHT, KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate)); rv ^= ~kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_RIGHT, KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
+			rv &= kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_LEFT, KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
+			rv &= kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_RIGHT, KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
 			rv &= kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_UP, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
 			rv &= kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_DOWN, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
 			rv &= kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_LEFT, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
