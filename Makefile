@@ -19,7 +19,7 @@ cflags.normal	=	-s -O1
 cflags.extra	=	
 CFLAGS			=	$(cflags.common) $(cflags.$(BUILD)) $(cflags.extra)
 
-LDFLAGS	=	-L$(HOME)/.local/lib -lkbinput -lpthread -lm
+LDFLAGS	=	-lkbinput -lpthread -lm
 
 SRCDIR	=	src
 OBJDIR	=	obj
