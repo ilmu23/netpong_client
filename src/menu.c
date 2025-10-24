@@ -427,31 +427,31 @@ static inline u8	_setup_menus(void) {
 	if (strlen(tmp->title) > menus.main->longest_title)
 		menus.main->longest_title = strlen(tmp->title);
 	tmp = menus.options->root;
-	if (!_add_below(tmp, _new_item("Set Selection Foreground Color", menus.options, menus.colors.selection.fg, ENTER_MENU, NULL, 0)))
+	if (!_add_below(tmp, _new_item("Set Selection Foreground Color", menus.main, menus.colors.selection.fg, ENTER_MENU, NULL, 0)))
 		return 0;
 	menus.options->height++;
 	tmp = tmp->neighbors.down;
 	if (strlen(tmp->title) > menus.options->longest_title)
 		menus.options->longest_title = strlen(tmp->title);
-	if (!_add_below(tmp, _new_item("Set Selection Background Color", menus.options, menus.colors.selection.bg, ENTER_MENU, NULL, 0)))
+	if (!_add_below(tmp, _new_item("Set Selection Background Color", menus.main, menus.colors.selection.bg, ENTER_MENU, NULL, 0)))
 		return 0;
 	menus.options->height++;
 	tmp = tmp->neighbors.down;
 	if (strlen(tmp->title) > menus.options->longest_title)
 		menus.options->longest_title = strlen(tmp->title);
-	if (!_add_below(tmp, _new_item("Set Paddle Color", menus.options, menus.colors.paddle, ENTER_MENU, NULL, 0)))
+	if (!_add_below(tmp, _new_item("Set Paddle Color", menus.main, menus.colors.paddle, ENTER_MENU, NULL, 0)))
 		return 0;
 	menus.options->height++;
 	tmp = tmp->neighbors.down;
 	if (strlen(tmp->title) > menus.options->longest_title)
 		menus.options->longest_title = strlen(tmp->title);
-	if (!_add_below(tmp, _new_item("Set Ball Color", menus.options, menus.colors.ball, ENTER_MENU, NULL, 0)))
+	if (!_add_below(tmp, _new_item("Set Ball Color", menus.main, menus.colors.ball, ENTER_MENU, NULL, 0)))
 		return 0;
 	menus.options->height++;
 	tmp = tmp->neighbors.down;
 	if (strlen(tmp->title) > menus.options->longest_title)
 		menus.options->longest_title = strlen(tmp->title);
-	if (!_add_below(tmp, _new_item("Set Edge Color", menus.options, menus.colors.edge, ENTER_MENU, NULL, 0)))
+	if (!_add_below(tmp, _new_item("Set Edge Color", menus.main, menus.colors.edge, ENTER_MENU, NULL, 0)))
 		return 0;
 	menus.options->height++;
 	tmp = tmp->neighbors.down;
