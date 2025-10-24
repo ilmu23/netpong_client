@@ -163,21 +163,25 @@ static inline const kbinput_key	*_navigate(const kbinput_key *event) {
 		case 'h':
 		case 'a':
 		case KB_KEY_LEFT:
+		case KB_KEY_LEGACY_LEFT:
 			next = menus.current->current->neighbors.left;
 			break ;
 		case 'j':
 		case 's':
 		case KB_KEY_DOWN:
+		case KB_KEY_LEGACY_DOWN:
 			next = menus.current->current->neighbors.down;
 			break ;
 		case 'k':
 		case 'w':
 		case KB_KEY_UP:
+		case KB_KEY_LEGACY_UP:
 			next = menus.current->current->neighbors.up;
 			break ;
 		case 'l':
 		case 'd':
 		case KB_KEY_RIGHT:
+		case KB_KEY_LEGACY_RIGHT:
 			next = menus.current->current->neighbors.right;
 			break ;
 		default:
@@ -256,8 +260,6 @@ static inline u8	_init(const char *server_addr, const char *server_port) {
 		return 0;
 	kbinput_init();
 	kb_protocol = kbinput_get_input_protocol();
-	if (kb_protocol != KB_INPUT_PROTOCOL_KITTY)
-		return 0;
 	menu_binds = kbinput_new_listener();
 	game_binds = kbinput_new_listener();
 	if (menu_binds == -1 || game_binds == -1)
@@ -276,38 +278,42 @@ static inline u8	_setup_menu_binds(void) {
 	u8	rv;
 
 	rv = 1;
+	rv &= kbinput_add_listener(menu_binds, kbinput_key('h', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
+	rv &= kbinput_add_listener(menu_binds, kbinput_key('j', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
+	rv &= kbinput_add_listener(menu_binds, kbinput_key('k', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
+	rv &= kbinput_add_listener(menu_binds, kbinput_key('l', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
+	rv &= kbinput_add_listener(menu_binds, kbinput_key('w', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
+	rv &= kbinput_add_listener(menu_binds, kbinput_key('a', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
+	rv &= kbinput_add_listener(menu_binds, kbinput_key('s', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
+	rv &= kbinput_add_listener(menu_binds, kbinput_key('d', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
+	rv &= kbinput_add_listener(menu_binds, kbinput_key('q', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _quit));
+	rv &= kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_ENTER, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _select));
+	rv &= kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_BACKSPACE, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _back));
+	rv &= kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_ESCAPE, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _quit));
 	switch (kb_protocol) {
 		case KB_INPUT_PROTOCOL_KITTY:
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key('h', KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key('j', KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key('k', KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key('l', KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key('w', KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key('a', KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key('s', KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key('d', KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_UP, KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_DOWN, KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_LEFT, KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_RIGHT, KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
-			[[fallthrough]];
+			rv &= kbinput_add_listener(menu_binds, kbinput_key('h', KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
+			rv &= kbinput_add_listener(menu_binds, kbinput_key('j', KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
+			rv &= kbinput_add_listener(menu_binds, kbinput_key('k', KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
+			rv &= kbinput_add_listener(menu_binds, kbinput_key('l', KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
+			rv &= kbinput_add_listener(menu_binds, kbinput_key('w', KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
+			rv &= kbinput_add_listener(menu_binds, kbinput_key('a', KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
+			rv &= kbinput_add_listener(menu_binds, kbinput_key('s', KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
+			rv &= kbinput_add_listener(menu_binds, kbinput_key('d', KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
+			rv &= kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_UP, KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
+			rv &= kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_DOWN, KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
+			rv &= kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_LEFT, KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate)); rv ^= ~kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_RIGHT, KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
+			rv &= kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_RIGHT, KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate)); rv ^= ~kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_RIGHT, KB_MOD_IGN_LCK, KB_EVENT_REPEAT, _navigate));
+			rv &= kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_UP, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
+			rv &= kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_DOWN, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
+			rv &= kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_LEFT, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
+			rv &= kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_RIGHT, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
+			break ;
 		case KB_INPUT_PROTOCOL_LEGACY:
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key('h', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key('j', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key('k', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key('l', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key('w', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key('a', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key('s', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key('d', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_UP, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_DOWN, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_LEFT, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_RIGHT, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_ENTER, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _select));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_BACKSPACE, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _back));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_ESCAPE, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _quit));
-			rv ^= ~kbinput_add_listener(menu_binds, kbinput_key('q', KB_MOD_IGN_LCK, KB_EVENT_PRESS, _quit));
+			rv &= kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_LEGACY_UP, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
+			rv &= kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_LEGACY_DOWN, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
+			rv &= kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_LEGACY_LEFT, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
+			rv &= kbinput_add_listener(menu_binds, kbinput_key(KB_KEY_LEGACY_RIGHT, KB_MOD_IGN_LCK, KB_EVENT_PRESS, _navigate));
 	}
 	return rv;
 }
